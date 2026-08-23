@@ -8,7 +8,7 @@ const rnd = () => { _seed = (_seed * 9301 + 49297) % 233280; return _seed / 2332
 const pick = (arr) => arr[Math.floor(rnd() * arr.length)]
 
 export const DEMO_PASSWORD_HASH = 'demo' // checked specially in signIn
-export const SCHEMA_VERSION = 8
+export const SCHEMA_VERSION = 9
 
 const at = (date, hhmm) => { const [h, m] = hhmm.split(':').map(Number); return setMinutes(setHours(startOfDay(date), h), m) }
 
@@ -27,6 +27,7 @@ export function buildSeed() {
   // Other demo students (no login)
   const others = DEMO_STUDENT_NAMES.map((n, i) => mkUser({ id: `u_d${i + 1}`, role: 'student', name: n, firstName: n.split(' ')[0], lastName: n.split(' ')[1], email: `${n.toLowerCase().replace(/ /g, '.')}@example.com`, passwordHash: DEMO_PASSWORD_HASH, timezone: tz, age: 7 + (i % 9), grade: `Grade ${2 + (i % 7)}`, parentId: null, createdAt: subDays(now, 90 + i * 3).toISOString(), status: 'active', points: 200 + i * 37, streak: i % 9 }))
   // A second parent (for messages realism)
+  mkUser({ id: 'u_admin', role: 'admin', name: 'Academy Admin', firstName: 'Academy', lastName: 'Admin', email: 'admin@bright.academy', passwordHash: DEMO_PASSWORD_HASH, timezone: tz, createdAt: subDays(now, 400).toISOString(), status: 'active' })
   const parent2 = mkUser({ id: 'u_parent2', role: 'parent', name: 'Karim Karimov', firstName: 'Karim', lastName: 'Karimov', email: 'karim@example.com', passwordHash: DEMO_PASSWORD_HASH, timezone: tz, children: ['u_d1'], createdAt: subDays(now, 95).toISOString(), status: 'active' })
   others[0].parentId = 'u_parent2'
 

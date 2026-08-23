@@ -71,8 +71,8 @@ language sql stable security definer set search_path = public as $$
     or exists (
       select 1 from public.profiles pr
       where pr.id = auth.uid()
-        and (pr.data->>'teacherId') is not null
-        and ('teacher:' || (pr.data->>'teacherId')) = any(p)
+        and (pr.role = 'admin'
+          or ((pr.data->>'teacherId') is not null and ('teacher:' || (pr.data->>'teacherId')) = any(p)))
     )
 $$;
 

@@ -8,7 +8,7 @@ import { cn } from '../../lib/utils.js'
 
 const EMPTY = []
 
-export const dashboardPath = (user) => (user?.role === 'teacher' ? '/teacher/dashboard' : user?.role === 'student' ? '/student/dashboard' : '/parent/dashboard')
+export const dashboardPath = (user) => (user?.role === 'teacher' ? '/teacher/dashboard' : user?.role === 'student' ? '/student/dashboard' : user?.role === 'admin' ? '/admin/inbox' : '/parent/dashboard')
 
 export default function Navbar() {
   const user = useCurrentUser()

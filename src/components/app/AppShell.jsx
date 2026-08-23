@@ -1,11 +1,15 @@
 import React, { useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate, Navigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Mail, GraduationCap, FileText, Film, CalendarDays, ClipboardList, CalendarClock, CalendarCheck, CalendarX, BookOpen, NotebookPen, Users, UsersRound, BadgeCheck, TrendingUp, Wallet, MessageSquare, LifeBuoy, Settings, Bell, LogOut, PanelLeft, ChevronsUpDown, Heart, ShoppingCart, ListChecks, Award, CreditCard, BarChart3, School, X, Sparkles } from 'lucide-react'
+import { Inbox, LayoutDashboard, Mail, GraduationCap, FileText, Film, CalendarDays, ClipboardList, CalendarClock, CalendarCheck, CalendarX, BookOpen, NotebookPen, Users, UsersRound, BadgeCheck, TrendingUp, Wallet, MessageSquare, LifeBuoy, Settings, Bell, LogOut, PanelLeft, ChevronsUpDown, Heart, ShoppingCart, ListChecks, Award, CreditCard, BarChart3, School, X, Sparkles } from 'lucide-react'
 import { useStore, useUI, useCurrentUser, unreadCount, unreadNotifications, EMPTY } from '../../lib/store.js'
 import { Avatar, Badge, Dropdown, MenuItem, asset } from '../ui/index.jsx'
 import { cn, fmtRelative } from '../../lib/utils.js'
 
 const NAV = {
+  admin: [
+    { group: 'Main', items: [{ t: 'Inbox', to: '/admin/inbox', icon: Inbox, badge: 'inbox' }] },
+    { group: 'Other', items: [{ t: 'Help Center', to: '/help-center', icon: LifeBuoy }, { t: 'Settings', to: '/settings', icon: Settings }] },
+  ],
   teacher: [
     { group: 'Main', items: [{ t: 'Dashboard', to: '/teacher/dashboard', icon: LayoutDashboard }, { t: 'Messages', to: '/teacher/messages', icon: Mail, badge: 'messages' }] },
     { group: 'Courses', items: [{ t: 'My Courses', to: '/teacher/courses', icon: GraduationCap }, { t: 'Course Proposals', to: '/teacher/course-proposals', icon: FileText }, { t: 'Recordings', to: '/teacher/recordings', icon: Film }] },
@@ -37,6 +41,7 @@ function useBadges(user) {
       return JSON.stringify({ messages: msgs, trials, homework: hw, reschedule: rr, approvals: ap })
     }
     if (user.role === 'student') return JSON.stringify({ messages: msgs, homework: s.homework.filter((h) => h.studentId === user.id && (h.status === 'assigned' || h.status === 'revision')).length })
+    if (user.role === 'admin') { const unh = (arr) => (arr || []).filter((x) => !x.handled).length; return JSON.stringify({ messages: msgs, inbox: unh(s.leads) + unh(s.applications) + unh(s.customPlanRequests) }) }
     return JSON.stringify({ messages: msgs })
   })
 }

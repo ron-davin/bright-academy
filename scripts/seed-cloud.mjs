@@ -46,6 +46,12 @@ const run = async () => {
     if (error) throw new Error(`profile ${d.email}: ${error.message}`)
   }
 
+  const { count: realForms } = await db.from('records').select('id', { count: 'exact', head: true }).in('collection', ['leads', 'applications', 'customPlanRequests'])
+  if ((realForms || 0) > 0 && !process.env.FORCE) {
+    console.error(`✖ Refusing to reseed: ${realForms} real form submission(s) (leads/applications) exist and would be DELETED.`)
+    console.error('  Re-run with FORCE=1 to wipe everything anyway.')
+    process.exit(1)
+  }
   console.log('→ Clearing old records…')
   await db.from('records').delete().neq('id', '')
 

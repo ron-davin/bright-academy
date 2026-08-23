@@ -213,6 +213,7 @@ export const useStore = create(
       addLead: (lead) => set((s) => ({ leads: [{ id: uid('lead'), at: new Date().toISOString(), ...lead }, ...s.leads] })),
       addApplication: (app) => set((s) => ({ applications: [{ id: uid('app'), at: new Date().toISOString(), status: 'pending', ...app }, ...s.applications] })),
       addCustomPlanRequest: (r) => set((s) => ({ customPlanRequests: [{ id: uid('cpr'), at: new Date().toISOString(), ...r }, ...s.customPlanRequests] })),
+      markHandled: (collection, id, handled = true) => set((s) => ({ [collection]: (s[collection] || []).map((x) => (x.id === id ? { ...x, handled } : x)) })),
 
       // ---------- cloud plumbing ----------
       cloudRefresh: async (userId) => {

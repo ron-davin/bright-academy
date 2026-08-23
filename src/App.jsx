@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Routes, Route, Outlet, useLocation } from 'react-router-dom'
+import { Routes, Route, Outlet, useLocation, Navigate } from 'react-router-dom'
 import Navbar from './components/marketing/Navbar.jsx'
 import Footer from './components/marketing/Footer.jsx'
 import AuthDialog from './components/marketing/AuthDialog.jsx'
@@ -32,6 +32,7 @@ import { ParentDashboard, ParentChildren, ParentEnrolled, ParentWishlist, Parent
 import { StudentDashboard, StudentSessions, StudentSchedule, StudentRecordings, StudentCourses, StudentAttendance, StudentHomework, StudentTeachers, StudentFeedbackPage, StudentProgress, StudentCertificates } from './pages/student/index.jsx'
 import { SettingsPage, HelpCenter } from './pages/shared/SettingsHelp.jsx'
 import Classroom from './pages/shared/Classroom.jsx'
+import AdminInbox from './pages/admin/Inbox.jsx'
 import CertificateView from './pages/shared/Certificate.jsx'
 
 function ScrollToTop() { const { pathname } = useLocation(); useEffect(() => { window.scrollTo(0, 0) }, [pathname]); return null }
@@ -115,6 +116,11 @@ export default function App() {
           <Route path="/student/progress" element={<StudentProgress />} />
           <Route path="/student/certificates" element={<StudentCertificates />} />
           <Route path="/student/messages" element={<MessagesPage />} />
+        </Route>
+
+        <Route element={<AppShell role="admin" />}>
+          <Route path="/admin/inbox" element={<AdminInbox />} />
+          <Route path="/admin/dashboard" element={<Navigate to="/admin/inbox" replace />} />
         </Route>
 
         <Route element={<AppShell />}>
