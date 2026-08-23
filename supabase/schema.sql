@@ -67,6 +67,7 @@ language sql stable security definer set search_path = public as $$
   select
     (auth.uid() is not null and auth.uid()::text = any(p))
     or 'public' = any(p)
+    or ('auth' = any(p) and auth.uid() is not null)
     or exists (
       select 1 from public.profiles pr
       where pr.id = auth.uid()

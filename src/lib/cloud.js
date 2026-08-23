@@ -25,7 +25,7 @@ export function participantsFor(collection, item, usersById) {
   const add = (id) => { if (!id) return; const u = usersById[id]; if (uidLike(id)) out.add(id); if (u?.parentId && uidLike(u.parentId)) out.add(u.parentId); if (u?.role === 'teacher' && u.teacherId) out.add(`teacher:${u.teacherId}`) }
   const addTeacher = (tid) => tid && out.add(`teacher:${tid}`)
   switch (collection) {
-    case 'users': add(item.parentId); break
+    case 'users': out.add('auth'); add(item.parentId); break
     case 'enrollments': case 'homework': case 'trials': case 'rescheduleRequests': case 'approvalRequests': case 'certificates': case 'feedback':
       addTeacher(item.teacherId); add(item.studentId); add(item.parentId); add(item.requesterId); break
     case 'sessions': case 'recordings': addTeacher(item.teacherId); (item.studentIds || []).forEach(add); break
