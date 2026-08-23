@@ -15,6 +15,7 @@ export function SettingsPage() {
   const [notif, setNotif] = useState(user.notifPrefs || { reminders: true, homework: true, progress: true, joins: true })
   const [resetOpen, setResetOpen] = useState(false)
   const fileRef = useRef(null)
+  const cloud = useStore((s) => s.cloud)
   const isTeacher = user.role === 'teacher'
   const tabs = [['profile', 'Profile', User], ...(isTeacher ? [['experience', 'Experience', Briefcase], ['education', 'Education', GraduationCap], ['videos', 'Sample videos', Video]] : []), ['notifications', 'Notifications', Bell], ['account', 'Account', KeyRound]]
   const tProfile = isTeacher ? TEACHERS.find((t) => t.id === user.teacherId) : null
@@ -78,10 +79,16 @@ export function SettingsPage() {
                 <div className="grid gap-4 sm:grid-cols-2"><Input app type="password" label="Current password" value={pw.current} onChange={(e) => setPw((x) => ({ ...x, current: e.target.value }))} /><Input app type="password" label="New password" value={pw.next} onChange={(e) => setPw((x) => ({ ...x, next: e.target.value }))} /></div>
                 <div className="flex justify-end"><Button app variant="outline" onClick={async () => { try { await changePassword(user.id, pw.current, pw.next); setPw({ current: '', next: '' }); toast({ title: 'Password changed', type: 'success' }) } catch (e) { toast({ title: e.message, type: 'error' }) } }}>Update password</Button></div>
               </CardBody></Card>
-              <Card app className="border-coral-500/30"><CardHeader title="Demo data" subtitle="Everything lives in this browser's localStorage." /><CardBody>
-                <Button app variant="danger" onClick={() => setResetOpen(true)}><RefreshCw className="h-4 w-4" /> Reset demo data</Button>
-                <p className="mt-2 text-xs text-ink/50">Restores the original demo accounts, sessions and content. Your own accounts and changes are erased.</p>
-              </CardBody></Card>
+              {cloud ? (
+                <Card app><CardHeader title="Cloud account" subtitle="☁️ Your data is stored in the academy cloud (Supabase) and syncs across devices in real time." /><CardBody>
+                  <p className="text-xs text-ink/50">Signing out here does not delete anything. Account deletion would be handled by the academy admin in production.</p>
+                </CardBody></Card>
+              ) : (
+                <Card app className="border-coral-500/30"><CardHeader title="Demo data" subtitle="Everything lives in this browser's localStorage." /><CardBody>
+                  <Button app variant="danger" onClick={() => setResetOpen(true)}><RefreshCw className="h-4 w-4" /> Reset demo data</Button>
+                  <p className="mt-2 text-xs text-ink/50">Restores the original demo accounts, sessions and content. Your own accounts and changes are erased.</p>
+                </CardBody></Card>
+              )}
             </>
           )}
         </div>

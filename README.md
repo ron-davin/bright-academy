@@ -12,7 +12,11 @@
 | Parent | `parent@bright.academy` | `demo1234` |
 | Student | `student@bright.academy` | `demo1234` |
 
-Or use the one-click **demo buttons** on the Sign In dialog. You can also create your own accounts — everything is stored in your browser's localStorage (no backend). *Settings → Account → Reset demo data* restores the seed.
+Or use the one-click **demo buttons** on the Sign In dialog. You can also create your own accounts.
+
+**Two modes, auto-detected:**
+- **Local demo mode** (default until Supabase is connected): everything is stored in your browser's localStorage. *Settings → Account → Reset demo data* restores the seed.
+- **Cloud mode** (real accounts): connect a free Supabase project — see **[SETUP-CLOUD.md](SETUP-CLOUD.md)** — and the same site gets real cross-device sign-ups, a shared Postgres database with row-level security, and live realtime sync (messages, homework, bookings update across open browsers instantly). Visitors can still opt into a private local sandbox via "Explore local demo".
 
 ## What's inside
 
@@ -40,7 +44,7 @@ This demo intentionally runs at **$0/month**. The in-app **Services & Costs** pa
 | Capability | Free (now) | Production (approx.) |
 |---|---|---|
 | Hosting | GitHub Pages | Free; custom domain ~$10–15/yr |
-| Backend / DB / auth | Browser localStorage | Supabase/Firebase free tier → ~$25/mo |
+| Backend / DB / auth | Browser localStorage — **or Supabase free tier (wired in, see SETUP-CLOUD.md)** | Supabase Pro ~$25/mo when you outgrow free |
 | Live video | PeerJS P2P + Jitsi fallback | Managed video (LiveKit/Daily/100ms) ~$0.004–0.007 per participant-min; or self-hosted Jitsi/LiveKit VPS ~$20–40/mo; TURN for strict NATs |
 | Recording & storage | Local file recording | ~$0.0135/min recording + S3/Backblaze storage |
 | Payments | Simulated checkout | Stripe ~2.9% + $0.30 per charge; payouts via Stripe Connect/Wise |

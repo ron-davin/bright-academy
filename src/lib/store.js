@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { addDays, addMinutes, addWeeks, startOfDay, setHours, setMinutes } from 'date-fns'
 import { buildSeed, SCHEMA_VERSION, DEMO_PASSWORD_HASH } from './seed.js'
+import { supabase, cloudActive, setLocalModeForced, loadCloudState, diffAndPush, resetShadow, subscribeRealtime, buildStateFromRows } from './cloud.js'
+import { CLOUD_CONFIGURED } from './cloud-config.js'
 import { COURSES } from './data.js'
 import { uid, sha256, detectTimezone } from './utils.js'
 
@@ -24,7 +26,9 @@ export const toast = (t) => useUI.getState().toast(t)
 export const useStore = create(
   persist(
     (set, get) => ({
-      ...buildSeed(),
+      ...(cloudActive() ? { ...buildStateFromRows([], []), schemaVersion: SCHEMA_VERSION, seededAt: null, currentUserId: null, leads: [], applications: [], customPlanRequests: [], withdrawals: [], payoutMethods: {}, carts: {}, wishlists: {}, availability: {} } : buildSeed()),
+      cloud: cloudActive(),
+      cloudReady: !cloudActive(),
 
       // ---------- helpers ----------
       _update: (fn) => set((s) => fn(s)),
@@ -36,6 +40,19 @@ export const useStore = create(
       // ---------- auth ----------
       signUp: async ({ name, email, password, role = 'parent', timezone, phone = '', age, grade, childName, childAge, childGrade }) => {
         const s = get()
+        if (s.cloud) {
+          if (password.length < 6) throw new Error('Password must be at least 6 characters.')
+          const extra = { timezone: timezone || detectTimezone(), phone }
+          if (role === 'student') Object.assign(extra, { age: age ? Number(age) : null, grade: grade || '', points: 0, streak: 0 })
+          if (role === 'teacher') Object.assign(extra, { teacherId: null, applicationStatus: 'pending' })
+          const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options: { data: { name: name.trim(), role, data: extra } } })
+          if (error) throw new Error(error.message)
+          if (!data.session) throw new Error('Almost there — confirm the link we emailed you, then sign in. (Site owner: disable “Confirm email” in Supabase Auth settings for instant signups.)')
+          await get().cloudRefresh(data.session.user.id)
+          if (role === 'parent' && childName) get().addChild(data.session.user.id, { name: childName, age: childAge, grade: childGrade })
+          get().notify(data.session.user.id, `Welcome to Bright Academy, ${name.split(' ')[0]}!`, role === 'teacher' ? 'Your teacher application is under review.' : 'Browse courses and book a free trial to get started.', 'success')
+          return get().users.find((u) => u.id === data.session.user.id) || { id: data.session.user.id, role, name, firstName: name.split(' ')[0] }
+        }
         const em = email.trim().toLowerCase()
         if (s.users.some((u) => u.email.toLowerCase() === em)) throw new Error('An account with this email already exists. Please sign in.')
         if (password.length < 6) throw new Error('Password must be at least 6 characters.')
@@ -57,6 +74,12 @@ export const useStore = create(
       },
       signIn: async (email, password) => {
         const s = get()
+        if (s.cloud) {
+          const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+          if (error) throw new Error(error.message === 'Invalid login credentials' ? 'Wrong email or password. Demo accounts exist only after the cloud seed is run — or use “Explore local demo”.' : error.message)
+          await get().cloudRefresh(data.user.id)
+          return get().users.find((u) => u.id === data.user.id)
+        }
         const em = email.trim().toLowerCase()
         const user = s.users.find((u) => u.email.toLowerCase() === em)
         if (!user) throw new Error('No account found with that email.')
@@ -65,10 +88,21 @@ export const useStore = create(
         set({ currentUserId: user.id })
         return user
       },
-      signInDemo: (role) => { const map = { teacher: 'u_teacher', parent: 'u_parent', student: 'u_s1' }; set({ currentUserId: map[role] }); return get().users.find((u) => u.id === map[role]) },
-      signOut: () => set({ currentUserId: null }),
-      updateUser: (id, patch) => set((s) => ({ users: s.users.map((u) => (u.id === id ? { ...u, ...patch, ...(patch.firstName || patch.lastName ? { name: `${patch.firstName ?? u.firstName} ${patch.lastName ?? u.lastName}`.trim() } : {}) } : u)) })),
+      signInDemo: async (role) => {
+        if (get().cloud) { const emails = { teacher: 'teacher@bright.academy', parent: 'parent@bright.academy', student: 'student@bright.academy' }; return get().signIn(emails[role], 'demo1234') }
+        const map = { teacher: 'u_teacher', parent: 'u_parent', student: 'u_s1' }; set({ currentUserId: map[role] }); return get().users.find((u) => u.id === map[role])
+      },
+      signOut: () => { if (get().cloud) { supabase.auth.signOut(); const empty = buildStateFromRows([], []); resetShadow(null); set({ ...empty, currentUserId: null, cloudReady: true }); get().cloudRefresh(null) } else set({ currentUserId: null }) },
+      updateUser: (id, patch) => {
+        set((s) => ({ users: s.users.map((u) => (u.id === id ? { ...u, ...patch, ...(patch.firstName || patch.lastName ? { name: `${patch.firstName ?? u.firstName} ${patch.lastName ?? u.lastName}`.trim() } : {}) } : u)) }))
+        const u = get().users.find((x) => x.id === id)
+        if (get().cloud && u?._profile) {
+          const { id: _i, role, email, name, firstName, lastName, _profile, passwordHash, createdAt, status, children, ...data } = u
+          supabase.from('profiles').update({ name: u.name, role: u.role, data }).eq('id', id).then(({ error }) => error && console.warn('[cloud] profile update failed:', error.message))
+        }
+      },
       changePassword: async (id, current, next) => {
+        if (get().cloud) { if (next.length < 6) throw new Error('New password must be at least 6 characters.'); const { error } = await supabase.auth.updateUser({ password: next }); if (error) throw new Error(error.message); return }
         const u = get().users.find((x) => x.id === id)
         const ok = u.passwordHash === DEMO_PASSWORD_HASH ? current === 'demo1234' : u.passwordHash === (await hashPassword(current))
         if (!ok) throw new Error('Current password is incorrect.')
@@ -179,11 +213,22 @@ export const useStore = create(
       addLead: (lead) => set((s) => ({ leads: [{ id: uid('lead'), at: new Date().toISOString(), ...lead }, ...s.leads] })),
       addApplication: (app) => set((s) => ({ applications: [{ id: uid('app'), at: new Date().toISOString(), status: 'pending', ...app }, ...s.applications] })),
       addCustomPlanRequest: (r) => set((s) => ({ customPlanRequests: [{ id: uid('cpr'), at: new Date().toISOString(), ...r }, ...s.customPlanRequests] })),
+
+      // ---------- cloud plumbing ----------
+      cloudRefresh: async (userId) => {
+        try {
+          const loaded = await loadCloudState(supabase)
+          resetShadow(loaded)
+          set({ ...loaded, currentUserId: userId ?? get().currentUserId, cloudReady: true })
+        } catch (e) { console.warn('[cloud] load failed', e); set({ cloudReady: true }); toast({ title: 'Cloud connection problem', desc: e.message, type: 'error' }) }
+      },
+      useLocalSandbox: () => { setLocalModeForced(true); window.location.href = import.meta.env.BASE_URL },
+      backToCloud: () => { setLocalModeForced(false); window.location.href = import.meta.env.BASE_URL },
     }),
     {
       name: 'bright-academy-store',
       version: SCHEMA_VERSION,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => (cloudActive() ? { getItem: () => null, setItem: () => {}, removeItem: () => {} } : localStorage)),
       migrate: (persisted, version) => (version === SCHEMA_VERSION ? persisted : buildSeed()),
       partialize: (s) => Object.fromEntries(Object.entries(s).filter(([, v]) => typeof v !== 'function')),
     },
@@ -208,4 +253,15 @@ export const unreadCount = (s, userId) => s.conversations.filter((c) => c.partic
 export const unreadNotifications = (s, userId) => s.notifications.filter((n) => n.userId === userId && !n.read).length
 export const EMPTY = []
 export const EMPTY_OBJ = {}
-if (typeof window !== 'undefined') window.__ba = useStore
+// ---------- cloud boot: restore session, initial load, realtime, write-through ----------
+if (typeof window !== 'undefined') {
+  window.__ba = useStore
+  if (cloudActive() && supabase) {
+    useStore.setState({ cloudReady: false })
+    supabase.auth.getSession().then(({ data }) => useStore.getState().cloudRefresh(data.session?.user?.id ?? null))
+    supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') useStore.setState({ currentUserId: null }) })
+    subscribeRealtime(supabase, useStore.setState, null)
+    useStore.subscribe((state) => diffAndPush(state, supabase))
+  }
+}
+export const cloudEnabled = CLOUD_CONFIGURED

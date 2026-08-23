@@ -67,6 +67,14 @@ export default function AppShell({ role }) {
   const loc = useLocation()
   const [open, setOpen] = useState(false)
   const badgesJson = useBadges(user)
+  const cloud = useStore((s) => s.cloud)
+  const cloudReady = useStore((s) => s.cloudReady)
+  if (cloud && !cloudReady) return (
+    <div className="flex min-h-svh flex-col items-center justify-center gap-3 bg-paper">
+      <img src={asset('logo-mark-t.png')} alt="" className="h-14 w-14 animate-pulse object-contain" />
+      <p className="text-sm text-ink/60">Connecting to Bright Academy cloud…</p>
+    </div>
+  )
   if (!user) return <Navigate to="/" replace state={{ authFor: loc.pathname }} />
   if (role && user.role !== role) return <Navigate to={`/${user.role}/dashboard`} replace />
   const badges = badgesJson === EMPTY ? {} : JSON.parse(badgesJson)

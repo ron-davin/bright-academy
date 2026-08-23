@@ -5,6 +5,8 @@ import { Dialog, Input, Select, Button } from '../ui/index.jsx'
 import { useStore, useUI, toast } from '../../lib/store.js'
 import { TIMEZONES, tzOffsetLabel, detectTimezone, cn } from '../../lib/utils.js'
 import { dashboardPath } from './Navbar.jsx'
+import { CLOUD_CONFIGURED } from '../../lib/cloud-config.js'
+import { localModeForced } from '../../lib/cloud.js'
 
 export default function AuthDialog() {
   const { authOpen, authMode, authRedirect, closeAuth, openAuth } = useUI()
@@ -16,7 +18,10 @@ export default function AuthDialog() {
   const done = (user) => { closeAuth(); setErr(''); toast({ title: `Welcome back, ${user.firstName}!`, type: 'success' }); nav(authRedirect || dashboardPath(user)) }
   const onSignIn = async (e) => { e.preventDefault(); setBusy(true); setErr(''); try { done(await signIn(f.email, f.password)) } catch (ex) { setErr(ex.message) } finally { setBusy(false) } }
   const onSignUp = async (e) => { e.preventDefault(); if (f.password !== f.confirm) return setErr('Passwords do not match.'); setBusy(true); setErr(''); try { const u = await signUp(f); closeAuth(); toast({ title: 'Account created!', desc: u.role === 'teacher' ? 'Your application is pending review.' : 'Let’s find the right course.', type: 'success' }); nav(authRedirect || dashboardPath(u)) } catch (ex) { setErr(ex.message) } finally { setBusy(false) } }
-  const demo = (role) => { const u = signInDemo(role); done(u) }
+  const cloud = useStore((st) => st.cloud)
+  const useLocalSandbox = useStore((st) => st.useLocalSandbox)
+  const backToCloud = useStore((st) => st.backToCloud)
+  const demo = async (role) => { setBusy(true); setErr(''); try { const u = await signInDemo(role); done(u) } catch (ex) { setErr(ex.message) } finally { setBusy(false) } }
   const Pw = ({ field, placeholder = '••••••••' }) => (
     <div className="relative"><Input type={show ? 'text' : 'password'} placeholder={placeholder} value={f[field]} onChange={set(field)} required className="pr-10" /><button type="button" onClick={() => setShow((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/40 hover:text-ink">{show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
   )
@@ -24,7 +29,7 @@ export default function AuthDialog() {
     <Dialog open={authOpen} onClose={closeAuth} size="sm">
       {authMode === 'signin' ? (
         <form onSubmit={onSignIn} className="space-y-4">
-          <div><h2 className="text-2xl font-bold text-ink">Sign in</h2><p className="mt-1 text-sm text-ink/60">Sign in to your account to continue</p></div>
+          <div><h2 className="text-2xl font-bold text-ink">Sign in</h2><p className="mt-1 text-sm text-ink/60">{cloud ? 'Real account — works on any device' : 'Sign in to your account to continue'}</p></div>
           <label className="block"><span className="label">Email</span><Input type="email" placeholder="your@email.com" value={f.email} onChange={set('email')} required autoFocus /></label>
           <label className="block"><span className="label flex items-center justify-between">Password <button type="button" className="text-xs font-medium text-brand-600 hover:underline" onClick={() => toast({ title: 'Password reset', desc: 'In this demo, accounts live in your browser. Create a new account or use a demo login.', type: 'info' })}>Forgot password?</button></span><Pw field="password" /></label>
           {err && <p className="rounded-lg bg-coral-500/10 px-3 py-2 text-sm text-coral-600">{err}</p>}
@@ -35,6 +40,8 @@ export default function AuthDialog() {
             {[['teacher', GraduationCap, 'Teacher'], ['parent', Users, 'Parent'], ['student', BookOpen, 'Student']].map(([r, I, l]) => <button key={r} type="button" onClick={() => demo(r)} className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/10 px-2 py-3 text-xs font-semibold text-ink hover:border-brand-400 hover:bg-brand-50"><I className="h-5 w-5 text-brand-600" />{l}</button>)}
           </div>
           <p className="text-center text-[11px] text-ink/50">Demo logins: teacher@bright.academy · parent@bright.academy · student@bright.academy — password <span className="font-mono">demo1234</span></p>
+          {CLOUD_CONFIGURED && !localModeForced() && <p className="text-center text-[11px] text-ink/50">☁️ Cloud accounts are on. Prefer a private sandbox? <button type="button" className="font-semibold text-brand-600 underline" onClick={useLocalSandbox}>Explore local demo</button></p>}
+          {CLOUD_CONFIGURED && localModeForced() && <p className="text-center text-[11px] text-ink/50">🧪 Local sandbox mode (data stays in this browser). <button type="button" className="font-semibold text-brand-600 underline" onClick={backToCloud}>Back to cloud accounts</button></p>}
         </form>
       ) : (
         <form onSubmit={onSignUp} className="space-y-4">

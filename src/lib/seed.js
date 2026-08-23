@@ -8,7 +8,7 @@ const rnd = () => { _seed = (_seed * 9301 + 49297) % 233280; return _seed / 2332
 const pick = (arr) => arr[Math.floor(rnd() * arr.length)]
 
 export const DEMO_PASSWORD_HASH = 'demo' // checked specially in signIn
-export const SCHEMA_VERSION = 7
+export const SCHEMA_VERSION = 8
 
 const at = (date, hhmm) => { const [h, m] = hhmm.split(':').map(Number); return setMinutes(setHours(startOfDay(date), h), m) }
 
@@ -20,7 +20,7 @@ export function buildSeed() {
   const mkUser = (u) => { users.push(u); return u }
 
   // --- Accounts ---
-  const teacher = mkUser({ id: 'u_teacher', role: 'teacher', name: 'Abdullah Hakim', firstName: 'Abdullah', lastName: 'Hakim', email: 'teacher@bright.academy', passwordHash: DEMO_PASSWORD_HASH, teacherId: 't3', timezone: tz, avatar: 'teachers/abdullah-hakim.jpg', phone: '+62 812 0000 1111', createdAt: subDays(now, 400).toISOString(), status: 'active', applicationStatus: 'approved' })
+  const teacher = mkUser({ id: 'u_teacher', role: 'teacher', name: 'Rayyannoor D.', firstName: 'Rayyannoor', lastName: 'D.', email: 'teacher@bright.academy', passwordHash: DEMO_PASSWORD_HASH, teacherId: 't3', timezone: tz, avatar: 'teachers/rayyannoor-d.jpg', phone: '+62 812 0000 1111', createdAt: subDays(now, 400).toISOString(), status: 'active', applicationStatus: 'approved' })
   const parent = mkUser({ id: 'u_parent', role: 'parent', name: 'Fatima Noor', firstName: 'Fatima', lastName: 'Noor', email: 'parent@bright.academy', passwordHash: DEMO_PASSWORD_HASH, timezone: tz, phone: '+1 555 010 7788', createdAt: subDays(now, 120).toISOString(), children: ['u_s1', 'u_s2'], status: 'active' })
   const yusuf = mkUser({ id: 'u_s1', role: 'student', name: 'Yusuf Noor', firstName: 'Yusuf', lastName: 'Noor', email: 'student@bright.academy', passwordHash: DEMO_PASSWORD_HASH, timezone: tz, age: 9, grade: 'Grade 4', parentId: 'u_parent', createdAt: subDays(now, 120).toISOString(), status: 'active', points: 1240, streak: 12 })
   const maryam = mkUser({ id: 'u_s2', role: 'student', name: 'Maryam Noor', firstName: 'Maryam', lastName: 'Noor', email: 'maryam@bright.academy', passwordHash: DEMO_PASSWORD_HASH, timezone: tz, age: 7, grade: 'Grade 2', parentId: 'u_parent', createdAt: subDays(now, 100).toISOString(), status: 'active', points: 620, streak: 5 })
@@ -152,7 +152,7 @@ export function buildSeed() {
   notif('u_teacher', 'Payout processed', 'Your July payout of $1,248 has been sent to your Wise account.', 6, 'success')
   notif('u_teacher', 'New review', 'Fatima Noor left a 5★ review on Quran Recitation with Tajweed.', 9)
   notif('u_parent', 'Lesson reminder', 'Yusuf’s Quran class starts in 15 minutes.', 0.1)
-  notif('u_parent', 'Homework graded', 'Sheikh Abdullah graded “Surah Al-Falaq — Ikhfa practice”: 92/100.', 2, 'success')
+  notif('u_parent', 'Homework graded', 'Shaykh Rayyannoor graded “Surah Al-Falaq — Ikhfa practice”: 92/100.', 2, 'success')
   notif('u_parent', 'Monthly report ready', 'Yusuf’s August progress report is available.', 5)
   notif('u_s1', 'Homework graded', 'You scored 92/100 on Surah Al-Falaq. MashaAllah!', 2, 'success')
   notif('u_s1', 'Streak!', 'You have a 12-day reading streak. Keep going!', 0.5, 'success')
@@ -178,14 +178,14 @@ export function buildSeed() {
 
   // ---- Reviews ----
   const rv = (courseId, teacherId, author, rating, text, daysAgo) => reviews.push({ id: uid('rev'), courseId, teacherId, authorName: author, authorId: null, rating, text, at: subDays(now, daysAgo).toISOString() })
-  rv('c2', 't3', 'Fatima N.', 5, 'Sheikh Abdullah is patient and precise. Yusuf’s Tajweed is unrecognisable from 3 months ago — in the best way.', 9)
+  rv('c2', 't3', 'Fatima N.', 5, 'Shaykh Rayyannoor is patient and precise. Yusuf’s Tajweed is unrecognisable from 3 months ago — in the best way.', 9)
   rv('c2', 't3', 'Karim K.', 5, 'Very good teacher and amazing teaching 😀', 14)
   rv('c2', 't3', 'Sumaya A.', 5, 'Best Quran teacher we have had, online or offline.', 33)
   rv('c12', 't3', 'Rania H.', 5, 'The group energy is wonderful. The reading streaks motivated my son more than anything we tried.', 20)
-  rv('c1', 't1', 'Hassan B.', 5, 'Ustadha Aisha is so gentle with the little ones. My 5-year-old reads words now!', 18)
+  rv('c1', 't1', 'Hassan B.', 5, 'Ustoza Nurlaila is so gentle with the little ones. My 5-year-old reads words now!', 18)
   rv('c3', 't5', 'Abdul R.', 5, 'The Sabaq/Sabqi/Manzil system is genius. He has kept everything he memorised.', 40)
   rv('c4', 't2', 'Nour S.', 5, 'She actually speaks Arabic with her cousins now. Fun and structured.', 22)
-  rv('c6', 't4', 'Maha O.', 5, 'Ustadh Omar makes Fiqh practical — wudu checklist on our fridge!', 30)
+  rv('c6', 't4', 'Maha O.', 5, 'Shaykh Abdul-azyz makes Fiqh practical — wudu checklist on our fridge!', 30)
   rv('c5', 't6', 'Hafsa B. (student)', 5, 'I understand Al-Fatihah in salah now. Best decision.', 11)
   rv('c7', 't7', 'Zain M.', 5, 'Story time with lessons. My kids talk about the Seerah at dinner.', 25)
 
