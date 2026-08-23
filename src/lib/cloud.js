@@ -62,10 +62,15 @@ function scheduleFlush(client) {
   flushTimer = setTimeout(async () => {
     flushTimer = null
     const jobs = [...queue.values()]; queue = new Map()
-    const upserts = jobs.filter((j) => j.op === 'upsert').map((j) => j.row)
+    const inserts = jobs.filter((j) => j.op === 'insert').map((j) => j.row)
+    const updates = jobs.filter((j) => j.op === 'update').map((j) => j.row)
     const deletes = jobs.filter((j) => j.op === 'delete').map((j) => j.id)
     try {
-      if (upserts.length) { const { error } = await client.from('records').upsert(upserts); if (error) console.warn('[cloud] upsert failed:', error.message) }
+      if (inserts.length) {
+        const { error } = await client.from('records').insert(inserts)
+        if (error) { const { error: e2 } = await client.from('records').upsert(inserts); if (e2) console.warn('[cloud] insert failed:', error.message, '/', e2.message) }
+      }
+      if (updates.length) { const { error } = await client.from('records').upsert(updates); if (error) console.warn('[cloud] update failed:', error.message) }
       if (deletes.length) { const { error } = await client.from('records').delete().in('id', deletes); if (error) console.warn('[cloud] delete failed:', error.message) }
     } catch (e) { console.warn('[cloud] sync error', e) }
   }, 250)
@@ -77,7 +82,14 @@ export function diffAndPush(state, client) {
   const next = snapshotOf(state)
   for (const [collection, map] of Object.entries(next)) {
     const prev = shadow[collection] || new Map()
-    for (const [id, json] of map) if (prev.get(id) !== json) { const item = JSON.parse(json); queue.set(`${collection}:${id}`, { op: 'upsert', row: rowFor(collection, item, usersById) }) }
+    for (const [id, json] of map) if (prev.get(id) !== json) {
+      const item = JSON.parse(json)
+      const key = `${collection}:${id}`
+      // Plain INSERT for new rows (anon visitors may insert leads/trials but have no UPDATE rights);
+      // keep a queued 'insert' as insert even if edited again before the flush.
+      const op = queue.get(key)?.op === 'insert' || !prev.has(id) ? 'insert' : 'update'
+      queue.set(key, { op, row: rowFor(collection, item, usersById) })
+    }
     for (const id of prev.keys()) if (!map.has(id)) queue.set(`${collection}:${id}`, { op: 'delete', id: `${collection}:${id}` })
   }
   shadow = next
