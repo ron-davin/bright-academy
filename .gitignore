@@ -26,3 +26,4 @@ dist-ssr
 .supabase-db-password.local
 .supabase-service-key.local
 .admin-credentials.local
+*.local
