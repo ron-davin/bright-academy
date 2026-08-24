@@ -8,13 +8,20 @@ import { courseOf } from '../../components/app/Shared.jsx'
 import { cn, fmtTime, initials, uid } from '../../lib/utils.js'
 
 const roomName = (sessionId) => `room-${String(sessionId).replace(/[^a-zA-Z0-9-]/g, '')}`
-// Free connectivity: Google STUN + Metered Open Relay community TURN (see /costs for scale options)
+// Free connectivity: three independent public STUN providers (probed live 2026-08).
+// For very strict/symmetric NATs add TURN credentials below (free Metered account = 20GB/mo) — see /costs.
+const TURN_SERVERS = [] // e.g. [{ urls: 'turn:xx.relay.metered.ca:443', username: '…', credential: '…' }]
 const ICE = { iceServers: [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-] }
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+  ...TURN_SERVERS,
+], iceCandidatePoolSize: 2 }
+const waitForIce = (pc, ms = 3000) => new Promise((resolve) => {
+  if (pc.iceGatheringState === 'complete') return resolve()
+  const timer = setTimeout(resolve, ms)
+  pc.addEventListener('icegatheringstatechange', () => { if (pc.iceGatheringState === 'complete') { clearTimeout(timer); resolve() } })
+})
 
 function useTimer(startedAt) {
   const [now, setNow] = useState(() => Date.now())
@@ -23,17 +30,27 @@ function useTimer(startedAt) {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
-function VideoTile({ stream, name, muted, self, off }) {
+function VideoTile({ stream, name, muted, self, off, link }) {
   const ref = useRef(null)
-  useEffect(() => { if (ref.current && stream) { ref.current.srcObject = stream; ref.current.play().catch(() => {}) } }, [stream])
+  const [needsTap, setNeedsTap] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !stream) return
+    el.srcObject = stream
+    el.muted = !!muted
+    el.play().catch(() => { el.muted = true; el.play().catch(() => {}); if (!muted) setNeedsTap(true) })
+  }, [stream, muted])
+  const unmute = () => { if (ref.current) { ref.current.muted = false; ref.current.play().catch(() => {}) } setNeedsTap(false) }
   const hasVideo = stream && stream.getVideoTracks().some((t) => t.enabled !== false) && !off
   return (
     <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-brand-950">
-      {hasVideo ? <video ref={ref} autoPlay playsInline muted={muted} className={cn('h-full w-full object-cover', self && 'scale-x-[-1]')} /> : (
+      {hasVideo ? <video ref={ref} autoPlay playsInline className={cn('h-full w-full object-cover', self && 'scale-x-[-1]')} /> : (
         <div className="flex h-full w-full items-center justify-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-700 text-xl font-bold text-white">{initials(name)}</span></div>
       )}
-      {stream && !hasVideo && <audio autoPlay ref={(el) => { if (el && stream) el.srcObject = stream }} />}
+      {stream && !hasVideo && <audio autoPlay ref={(el) => { if (el && stream) { el.srcObject = stream; el.play?.().catch(() => {}) } }} />}
+      {needsTap && <button type="button" onClick={unmute} className="absolute inset-0 flex items-center justify-center bg-black/40 text-sm font-semibold text-white">🔊 Tap for sound</button>}
       <span className="absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-0.5 text-xs font-medium text-white">{name}{self ? ' (you)' : ''}</span>
+      {!self && link && link !== 'connected' && <span className="absolute right-2 top-2 rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-medium text-sun-300">{link === 'failed' ? 'reconnecting…' : `${link}…`}</span>}
     </div>
   )
 }
@@ -103,7 +120,6 @@ export default function Classroom() {
   const myIdRef = useRef(uid('p'))
   const channelRef = useRef(null)
   const pcsRef = useRef({})           // peerId -> RTCPeerConnection
-  const pendingIce = useRef({})       // peerId -> [candidates]
   const presentRef = useRef({})       // peerId -> {name, role}
   const streamRef = useRef(null)
   const recorderRef = useRef(null)
@@ -126,10 +142,12 @@ export default function Classroom() {
     if (pcsRef.current[theirId]) return pcsRef.current[theirId]
     const pc = new RTCPeerConnection(ICE)
     pcsRef.current[theirId] = pc
-    pc.onicecandidate = (e) => { if (e.candidate) sendSignal({ to: theirId, from: myIdRef.current, candidate: e.candidate.toJSON() }) }
     pc.ontrack = (e) => { const stream = e.streams[0] || new MediaStream([e.track]); setPeers((p) => ({ ...p, [theirId]: { ...(p[theirId] || {}), stream } })) }
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'failed') {
+      const cs = pc.connectionState
+      setPeers((p) => (p[theirId] ? { ...p, [theirId]: { ...p[theirId], link: cs } } : p))
+      if (cs === 'connected') pc.getStats().then((stats) => stats.forEach((r) => { if (r.type === 'candidate-pair' && r.nominated && (r.selected || r.state === 'succeeded')) console.info('[rtc] media path connected', r.id) })).catch(() => {})
+      if (cs === 'failed') {
         try { pc.close() } catch { /* noop */ }
         delete pcsRef.current[theirId]
         setTimeout(() => { if (channelRef.current && presentRef.current[theirId] && myIdRef.current < theirId) initiateTo(theirId) }, 1500)
@@ -145,11 +163,10 @@ export default function Classroom() {
       addLocalMedia(pc, true)
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
-      sendSignal({ to: theirId, from: myIdRef.current, sdp: { type: offer.type, sdp: offer.sdp }, name: myName })
+      await waitForIce(pc) // non-trickle: all candidates ride in ONE message (avoids realtime rate limits)
+      sendSignal({ to: theirId, from: myIdRef.current, sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp }, name: myName })
     } catch (e) { console.warn('[rtc] offer failed', e) }
   }, [addLocalMedia, ensurePc, myName, sendSignal])
-
-  const flushIce = (from) => { const pc = pcsRef.current[from]; const q = pendingIce.current[from] || []; pendingIce.current[from] = []; q.forEach((c) => pc?.addIceCandidate(c).catch(() => {})) }
 
   const onSignal = useCallback(async (payload) => {
     if (!payload || payload.to !== myIdRef.current) return
@@ -158,17 +175,16 @@ export default function Classroom() {
     try {
       if (sdp?.type === 'offer') {
         const pc = ensurePc(from)
-        await pc.setRemoteDescription(sdp); flushIce(from)
+        await pc.setRemoteDescription(sdp)
         addLocalMedia(pc, false)
         const answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
-        sendSignal({ to: from, from: myIdRef.current, sdp: { type: answer.type, sdp: answer.sdp }, name: myName })
+        await waitForIce(pc)
+        sendSignal({ to: from, from: myIdRef.current, sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp }, name: myName })
       } else if (sdp?.type === 'answer') {
-        const pc = pcsRef.current[from]; if (pc && !pc.currentRemoteDescription) { await pc.setRemoteDescription(sdp); flushIce(from) }
+        const pc = pcsRef.current[from]; if (pc && !pc.currentRemoteDescription) await pc.setRemoteDescription(sdp)
       } else if (candidate) {
-        const pc = pcsRef.current[from]
-        if (pc?.remoteDescription) pc.addIceCandidate(candidate).catch(() => {})
-        else (pendingIce.current[from] ||= []).push(candidate)
+        pcsRef.current[from]?.addIceCandidate(candidate).catch(() => {})
       }
     } catch (e) { console.warn('[rtc] signal failed', e) }
   }, [addLocalMedia, ensurePc, myName, sendSignal])
@@ -269,7 +285,7 @@ export default function Classroom() {
         {mediaError && <p className="mt-3 rounded-lg bg-coral-500/20 p-2.5 text-xs text-coral-200">{mediaError}</p>}
         <Button variant="sun" className="mt-4 w-full" onClick={join} loading={connState === 'connecting'}>{isTeacher ? 'Start class & join' : 'Join the session'}</Button>
         <a href={jitsiUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-full border border-white/20 px-4 py-2.5 text-sm text-white/80 hover:bg-white/10"><ExternalLink className="h-4 w-4" /> Open in Jitsi Meet instead (free fallback)</a>
-        <p className="mt-4 text-[11px] leading-relaxed text-white/50">Built-in room: WebRTC video with free STUN + community TURN relay, signalled over the academy cloud — no cost. For heavy production use, see <Link to="/costs" className="underline">Services & Costs</Link>.</p>
+        <p className="mt-4 text-[11px] leading-relaxed text-white/50">Built-in room: direct WebRTC video over free public STUN, signalled through the academy cloud — no cost. Very strict school/office networks may need a TURN relay or the Jitsi fallback — see <Link to="/costs" className="underline">Services & Costs</Link>.</p>
       </div>
       <button type="button" onClick={() => nav(-1)} className="text-sm text-white/60 hover:text-white">← Back</button>
     </div>
@@ -296,7 +312,7 @@ export default function Classroom() {
         <div className="flex flex-1 flex-col p-3">
           <div className={cn('grid flex-1 content-start gap-3', peerList.length === 0 ? 'mx-auto w-full max-w-2xl grid-cols-1' : peerList.length <= 1 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3')}>
             <VideoTile stream={localStream} name={myName} muted self off={!cam} />
-            {peerList.map(([pid, p]) => <VideoTile key={pid} stream={p.stream} name={p.name || 'Participant'} />)}
+            {peerList.map(([pid, p]) => <VideoTile key={pid} stream={p.stream} name={p.name || 'Participant'} link={p.link} />)}
             {peerList.length === 0 && <p className="rounded-xl border border-dashed border-white/15 p-6 text-center text-sm text-white/50">{connState === 'local' ? 'Sandbox mode is single-browser — live multi-device rooms run on the cloud site.' : isTeacher ? 'Waiting for students to join… Share the class link or ask them to press Join in their portal.' : teacherPresent ? 'Connecting…' : 'Waiting for your teacher to join…'}</p>}
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">

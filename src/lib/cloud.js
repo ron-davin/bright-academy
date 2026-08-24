@@ -3,7 +3,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { SUPABASE_URL, SUPABASE_ANON_KEY, CLOUD_CONFIGURED } from './cloud-config.js'
 
-export const supabase = CLOUD_CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
+export const supabase = CLOUD_CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { realtime: { params: { eventsPerSecond: 50 } } }) : null
 
 // Local-mode escape hatch: visitors can explore the sandbox even when cloud is on
 export const localModeForced = () => { try { return localStorage.getItem('ba-local-mode') === '1' } catch { return false } }
