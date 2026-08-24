@@ -1,16 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
-import Peer from 'peerjs'
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Circle, Square, MessageSquare, PenTool, Users, NotebookPen, Send, Eraser, Trash2, ExternalLink, Copy, Clock, ShieldCheck, X } from 'lucide-react'
-import { useStore, useCurrentUser, toast } from '../../lib/store.js'
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Circle, Square, MessageSquare, PenTool, Users, NotebookPen, Send, Eraser, Trash2, ExternalLink, Copy, Clock, ShieldCheck, LogIn } from 'lucide-react'
+import { useStore, useCurrentUser, useUI, toast } from '../../lib/store.js'
+import { supabase, cloudActive } from '../../lib/cloud.js'
 import { Avatar, Badge, Button, Dialog, Input, asset } from '../../components/ui/index.jsx'
 import { courseOf } from '../../components/app/Shared.jsx'
-import { cn, fmtTime, initials } from '../../lib/utils.js'
+import { cn, fmtTime, initials, uid } from '../../lib/utils.js'
 
-const roomId = (sessionId) => `ba-${String(sessionId).replace(/[^a-zA-Z0-9-]/g, '')}-v1`
+const roomName = (sessionId) => `room-${String(sessionId).replace(/[^a-zA-Z0-9-]/g, '')}`
+// Free connectivity: Google STUN + Metered Open Relay community TURN (see /costs for scale options)
+const ICE = { iceServers: [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+] }
 
 function useTimer(startedAt) {
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
   const s = Math.max(0, Math.floor((now - startedAt) / 1000))
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
@@ -19,16 +26,19 @@ function useTimer(startedAt) {
 function VideoTile({ stream, name, muted, self, off }) {
   const ref = useRef(null)
   useEffect(() => { if (ref.current && stream) { ref.current.srcObject = stream; ref.current.play().catch(() => {}) } }, [stream])
+  const hasVideo = stream && stream.getVideoTracks().some((t) => t.enabled !== false) && !off
   return (
     <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-brand-950">
-      {stream && !off ? <video ref={ref} autoPlay playsInline muted={muted} className={cn('h-full w-full object-cover', self && 'scale-x-[-1]')} /> :
-        <div className="flex h-full w-full items-center justify-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-700 text-xl font-bold text-white">{initials(name)}</span></div>}
+      {hasVideo ? <video ref={ref} autoPlay playsInline muted={muted} className={cn('h-full w-full object-cover', self && 'scale-x-[-1]')} /> : (
+        <div className="flex h-full w-full items-center justify-center"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-700 text-xl font-bold text-white">{initials(name)}</span></div>
+      )}
+      {stream && !hasVideo && <audio autoPlay ref={(el) => { if (el && stream) el.srcObject = stream }} />}
       <span className="absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-0.5 text-xs font-medium text-white">{name}{self ? ' (you)' : ''}</span>
     </div>
   )
 }
 
-function Whiteboard({ send, remoteStrokes }) {
+function Whiteboard({ send, bus }) {
   const canvasRef = useRef(null)
   const [color, setColor] = useState('#0B2F40')
   const [size, setSize] = useState(3)
@@ -42,7 +52,7 @@ function Whiteboard({ send, remoteStrokes }) {
     for (const s of strokes.current) { ctx.strokeStyle = s.erase ? '#ffffff' : s.color; ctx.lineWidth = s.erase ? s.size * 6 : s.size; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); s.points.forEach(([x, y], i) => (i ? ctx.lineTo(x * c.width, y * c.height) : ctx.moveTo(x * c.width, y * c.height))); ctx.stroke() }
   }, [])
   useEffect(() => { const c = canvasRef.current; if (!c) return; const resize = () => { const r = c.parentElement.getBoundingClientRect(); c.width = r.width * 2; c.height = r.height * 2; redraw() }; resize(); window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize) }, [redraw])
-  useEffect(() => { if (!remoteStrokes) return; const un = remoteStrokes.subscribe((msg) => { if (msg.type === 'stroke') { strokes.current.push(msg.stroke); redraw() } else if (msg.type === 'wb-clear') { strokes.current = []; redraw() } }); return un }, [remoteStrokes, redraw])
+  useEffect(() => { if (!bus) return; return bus.subscribe((msg) => { if (msg.type === 'stroke') { strokes.current.push(msg.stroke); redraw() } else if (msg.type === 'wb-clear') { strokes.current = []; redraw() } }) }, [bus, redraw])
   const pos = (e) => { const r = canvasRef.current.getBoundingClientRect(); const t = e.touches?.[0] || e; return [(t.clientX - r.left) / r.width, (t.clientY - r.top) / r.height] }
   const start = (e) => { drawing.current = true; current.current = { color, size, erase, points: [pos(e)] } }
   const move = (e) => { if (!drawing.current || !current.current) return; e.preventDefault(); current.current.points.push(pos(e)); strokes.current = [...strokes.current.filter((s) => s !== current.current), current.current]; redraw() }
@@ -68,14 +78,18 @@ export default function Classroom() {
   const [params] = useSearchParams()
   const nav = useNavigate()
   const user = useCurrentUser()
+  const openAuth = useUI((s) => s.openAuth)
   const sess = useStore((s) => s.sessions.find((x) => x.id === sessionId))
   const users = useStore((s) => s.users)
+  const cloudReady = useStore((s) => s.cloudReady)
   const { startSession, endSession, markAttendance } = useStore()
   const isTeacher = user?.role === 'teacher' && user?.teacherId === sess?.teacherId
+  const cloud = cloudActive() && !!supabase
+
   const [joined, setJoined] = useState(false)
   const [localStream, setLocalStream] = useState(null)
   const [mediaError, setMediaError] = useState('')
-  const [peers, setPeers] = useState({}) // peerId -> {name, stream}
+  const [peers, setPeers] = useState({}) // peerId -> {name, role, stream}
   const [mic, setMic] = useState(true)
   const [cam, setCam] = useState(true)
   const [sharing, setSharing] = useState(false)
@@ -85,8 +99,12 @@ export default function Classroom() {
   const [msg, setMsg] = useState('')
   const [connState, setConnState] = useState('idle')
   const [endOpen, setEndOpen] = useState(false)
-  const peerRef = useRef(null)
-  const connsRef = useRef({}) // peerId -> DataConnection
+
+  const myIdRef = useRef(uid('p'))
+  const channelRef = useRef(null)
+  const pcsRef = useRef({})           // peerId -> RTCPeerConnection
+  const pendingIce = useRef({})       // peerId -> [candidates]
+  const presentRef = useRef({})       // peerId -> {name, role}
   const streamRef = useRef(null)
   const recorderRef = useRef(null)
   const wbSubs = useRef(new Set())
@@ -95,30 +113,79 @@ export default function Classroom() {
   const course = sess && courseOf(sess.courseId)
   const myName = user?.name || 'Guest'
 
-  const broadcast = useCallback((data, except) => { Object.entries(connsRef.current).forEach(([pid, c]) => { if (pid !== except && c.open) c.send(data) }) }, [])
   const wbBus = useMemo(() => ({ subscribe: (fn) => { wbSubs.current.add(fn); return () => wbSubs.current.delete(fn) }, emit: (m) => wbSubs.current.forEach((fn) => fn(m)) }), [])
-  const sendWb = useCallback((m) => { wbBus.emit(m); broadcast({ ...m, from: myName }) }, [broadcast, wbBus, myName])
+  const sendWb = useCallback((m) => { wbBus.emit(m); channelRef.current?.send({ type: 'broadcast', event: 'wb', payload: m }) }, [wbBus])
+  const sendSignal = useCallback((payload) => channelRef.current?.send({ type: 'broadcast', event: 'rtc', payload }), [])
 
-  const handleData = useCallback((data, fromPid) => {
-    if (!data || typeof data !== 'object') return
-    if (data.type === 'chat') setChat((c) => [...c, data])
-    if (data.type === 'stroke' || data.type === 'wb-clear') wbBus.emit(data)
-    if (data.type === 'hello') setPeers((p) => ({ ...p, [fromPid]: { ...(p[fromPid] || {}), name: data.name } }))
-    // host relays to everyone else
-    if (isTeacher) broadcast(data, fromPid)
-  }, [broadcast, isTeacher, wbBus])
-
-  const attachConn = useCallback((conn) => {
-    connsRef.current[conn.peer] = conn
-    conn.on('data', (d) => handleData(d, conn.peer))
-    conn.on('open', () => conn.send({ type: 'hello', name: myName }))
-    conn.on('close', () => { delete connsRef.current[conn.peer]; setPeers((p) => { const q = { ...p }; delete q[conn.peer]; return q }) })
-  }, [handleData, myName])
-
-  const attachCall = useCallback((call) => {
-    call.on('stream', (remote) => setPeers((p) => ({ ...p, [call.peer]: { ...(p[call.peer] || { name: 'Participant' }), stream: remote } })))
-    call.on('close', () => setPeers((p) => { const q = { ...p }; if (q[call.peer]) delete q[call.peer].stream; return q }))
+  const addLocalMedia = useCallback((pc, isInitiator) => {
+    if (streamRef.current) streamRef.current.getTracks().forEach((t) => pc.addTrack(t, streamRef.current))
+    else if (isInitiator) { pc.addTransceiver('audio', { direction: 'recvonly' }); pc.addTransceiver('video', { direction: 'recvonly' }) }
   }, [])
+
+  const ensurePc = useCallback((theirId) => {
+    if (pcsRef.current[theirId]) return pcsRef.current[theirId]
+    const pc = new RTCPeerConnection(ICE)
+    pcsRef.current[theirId] = pc
+    pc.onicecandidate = (e) => { if (e.candidate) sendSignal({ to: theirId, from: myIdRef.current, candidate: e.candidate.toJSON() }) }
+    pc.ontrack = (e) => { const stream = e.streams[0] || new MediaStream([e.track]); setPeers((p) => ({ ...p, [theirId]: { ...(p[theirId] || {}), stream } })) }
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed') {
+        try { pc.close() } catch { /* noop */ }
+        delete pcsRef.current[theirId]
+        setTimeout(() => { if (channelRef.current && presentRef.current[theirId] && myIdRef.current < theirId) initiateTo(theirId) }, 1500)
+      }
+    }
+    return pc
+  }, [sendSignal]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const initiateTo = useCallback(async (theirId) => {
+    try {
+      const pc = ensurePc(theirId)
+      if (pc.signalingState !== 'stable' || pc.localDescription) return
+      addLocalMedia(pc, true)
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+      sendSignal({ to: theirId, from: myIdRef.current, sdp: { type: offer.type, sdp: offer.sdp }, name: myName })
+    } catch (e) { console.warn('[rtc] offer failed', e) }
+  }, [addLocalMedia, ensurePc, myName, sendSignal])
+
+  const flushIce = (from) => { const pc = pcsRef.current[from]; const q = pendingIce.current[from] || []; pendingIce.current[from] = []; q.forEach((c) => pc?.addIceCandidate(c).catch(() => {})) }
+
+  const onSignal = useCallback(async (payload) => {
+    if (!payload || payload.to !== myIdRef.current) return
+    const { from, sdp, candidate, name } = payload
+    if (name) setPeers((p) => ({ ...p, [from]: { ...(p[from] || {}), name } }))
+    try {
+      if (sdp?.type === 'offer') {
+        const pc = ensurePc(from)
+        await pc.setRemoteDescription(sdp); flushIce(from)
+        addLocalMedia(pc, false)
+        const answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        sendSignal({ to: from, from: myIdRef.current, sdp: { type: answer.type, sdp: answer.sdp }, name: myName })
+      } else if (sdp?.type === 'answer') {
+        const pc = pcsRef.current[from]; if (pc && !pc.currentRemoteDescription) { await pc.setRemoteDescription(sdp); flushIce(from) }
+      } else if (candidate) {
+        const pc = pcsRef.current[from]
+        if (pc?.remoteDescription) pc.addIceCandidate(candidate).catch(() => {})
+        else (pendingIce.current[from] ||= []).push(candidate)
+      }
+    } catch (e) { console.warn('[rtc] signal failed', e) }
+  }, [addLocalMedia, ensurePc, myName, sendSignal])
+
+  const onPresence = useCallback(() => {
+    const stateObj = channelRef.current?.presenceState() || {}
+    const roster = {}
+    for (const [key, metas] of Object.entries(stateObj)) if (key !== myIdRef.current) roster[key] = { name: metas[0]?.name || 'Participant', role: metas[0]?.role }
+    presentRef.current = roster
+    setPeers((prev) => {
+      const next = {}
+      for (const [id, meta] of Object.entries(roster)) next[id] = { ...meta, stream: prev[id]?.stream }
+      return next
+    })
+    for (const id of Object.keys(pcsRef.current)) if (!roster[id]) { try { pcsRef.current[id].close() } catch { /* noop */ } delete pcsRef.current[id] }
+    for (const id of Object.keys(roster)) if (!pcsRef.current[id] && myIdRef.current < id) initiateTo(id)
+  }, [initiateTo])
 
   const join = useCallback(async () => {
     setConnState('connecting')
@@ -126,49 +193,49 @@ export default function Classroom() {
     const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
     try { stream = await withTimeout(navigator.mediaDevices.getUserMedia({ video: true, audio: true }), 6000) } catch { try { stream = await withTimeout(navigator.mediaDevices.getUserMedia({ audio: true }), 3000) } catch { setMediaError('Camera/mic unavailable — joining without media. Check browser permissions, then rejoin.') } }
     streamRef.current = stream; setLocalStream(stream)
-    const host = roomId(sessionId)
-    const peer = new Peer(isTeacher ? host : undefined, { debug: 0 })
-    peerRef.current = peer
-    peer.on('open', () => {
-      setJoined(true); setConnState('connected')
-      if (isTeacher) { startSession(sessionId); toast({ title: 'Classroom is live', desc: 'Students can join now.', type: 'success' }) }
-      else {
-        const tryConnect = () => {
-          const conn = peer.connect(host, { reliable: true }); attachConn(conn)
-          const call = stream ? peer.call(host, stream, { metadata: { name: myName } }) : null; if (call) attachCall(call)
-          conn.on('error', () => {}); setPeers((p) => ({ ...p, [host]: { ...(p[host] || {}), name: 'Teacher' } }))
-        }
-        tryConnect()
-        const iv = setInterval(() => { if (!connsRef.current[host] || !connsRef.current[host].open) tryConnect(); else clearInterval(iv) }, 4000)
-      }
+    if (!cloud) { setJoined(true); setConnState('local'); if (isTeacher) startSession(sessionId); return }
+    const ch = supabase.channel(roomName(sessionId), { config: { presence: { key: myIdRef.current }, broadcast: { self: false } } })
+    channelRef.current = ch
+    ch.on('presence', { event: 'sync' }, onPresence)
+    ch.on('broadcast', { event: 'rtc' }, ({ payload }) => onSignal(payload))
+    ch.on('broadcast', { event: 'chat' }, ({ payload }) => setChat((c) => [...c, payload]))
+    ch.on('broadcast', { event: 'wb' }, ({ payload }) => wbBus.emit(payload))
+    ch.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') { await ch.track({ name: myName, role: user.role }); setJoined(true); setConnState('connected'); if (isTeacher) { startSession(sessionId); toast({ title: 'Classroom is live', desc: 'Students can join now.', type: 'success' }) } }
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') { setConnState('error'); setMediaError('Could not reach the realtime service. Check your connection, or use "Open in Jitsi" below.') }
     })
-    peer.on('connection', attachConn)
-    peer.on('call', (call) => { call.answer(streamRef.current || undefined); if (call.metadata?.name) setPeers((p) => ({ ...p, [call.peer]: { ...(p[call.peer] || {}), name: call.metadata.name } })); attachCall(call) })
-    peer.on('error', (e) => {
-      if (e.type === 'unavailable-id') { setConnState('error'); setMediaError('This class already has an open teacher window. Close the other tab first.') }
-      else if (e.type === 'peer-unavailable') setConnState('waiting')
-      else if (['network', 'server-error', 'socket-error'].includes(e.type)) { setConnState('error'); setMediaError('Could not reach the free P2P signaling server. Use "Open in Jitsi" below as a fallback.') }
-    })
-  }, [attachCall, attachConn, isTeacher, myName, sessionId, startSession])
+  }, [cloud, isTeacher, myName, onPresence, onSignal, sessionId, startSession, user, wbBus])
 
-  useEffect(() => () => { // cleanup on unmount
-    Object.values(connsRef.current).forEach((c) => c.close?.())
-    peerRef.current?.destroy(); streamRef.current?.getTracks().forEach((t) => t.stop()); recorderRef.current?.stop?.()
+  useEffect(() => () => {
+    Object.values(pcsRef.current).forEach((pc) => { try { pc.close() } catch { /* noop */ } })
+    pcsRef.current = {}
+    if (channelRef.current && supabase) supabase.removeChannel(channelRef.current)
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    try { recorderRef.current?.stop?.() } catch { /* noop */ }
   }, [])
 
-  if (!user) return <div className="flex min-h-svh items-center justify-center bg-brand-950 text-white"><p>Please sign in to join the classroom.</p></div>
-  if (!sess) return <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-brand-950 text-white"><p>Session not found.</p><Button variant="light" onClick={() => nav(-1)}>Go back</Button></div>
+  if (!user) return (
+    <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-brand-950 p-6 text-white">
+      <img src={asset('logo-mark-t.png')} alt="" className="h-14 w-14 rounded-2xl bg-white/95 object-contain p-1.5" />
+      <p className="text-lg font-semibold">Please sign in to join the classroom</p>
+      <p className="max-w-sm text-center text-sm text-white/60">Use your Bright Academy account — teachers, students and parents can all join their own classes.</p>
+      <Button variant="sun" onClick={() => openAuth('signin', `/classroom/${sessionId}`)}><LogIn className="h-4 w-4" /> Sign in</Button>
+      <Link to="/" className="text-sm text-white/60 hover:text-white">← Back to home</Link>
+    </div>
+  )
+  if (!sess && cloud && !cloudReady) return <div className="flex min-h-svh items-center justify-center bg-brand-950 text-white"><p>Loading session…</p></div>
+  if (!sess) return <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-brand-950 text-white"><p>Session not found (or not yours to join).</p><Button variant="light" onClick={() => nav(-1)}>Go back</Button></div>
 
   const toggleMic = () => { const t = streamRef.current?.getAudioTracks?.()[0]; if (t) { t.enabled = !t.enabled; setMic(t.enabled) } }
   const toggleCam = () => { const t = streamRef.current?.getVideoTracks?.()[0]; if (t) { t.enabled = !t.enabled; setCam(t.enabled) } }
   const share = async () => {
+    if (sharing || !streamRef.current) return
     try {
-      if (sharing) return
       const display = await navigator.mediaDevices.getDisplayMedia({ video: true })
       const track = display.getVideoTracks()[0]
-      Object.values(peerRef.current?.connections || {}).flat().forEach((c) => { const sender = c.peerConnection?.getSenders?.().find((s) => s.track?.kind === 'video'); if (sender) sender.replaceTrack(track) })
+      Object.values(pcsRef.current).forEach((pc) => { const sender = pc.getSenders().find((s) => s.track?.kind === 'video'); if (sender) sender.replaceTrack(track) })
       setSharing(true)
-      track.onended = () => { const camTrack = streamRef.current?.getVideoTracks?.()[0]; Object.values(peerRef.current?.connections || {}).flat().forEach((c) => { const sender = c.peerConnection?.getSenders?.().find((s) => s.track?.kind === 'video'); if (sender && camTrack) sender.replaceTrack(camTrack) }); setSharing(false) }
+      track.onended = () => { const camTrack = streamRef.current?.getVideoTracks?.()[0]; Object.values(pcsRef.current).forEach((pc) => { const sender = pc.getSenders().find((s) => s.track?.kind === 'video' || s.track === track); if (sender && camTrack) sender.replaceTrack(camTrack) }); setSharing(false) }
     } catch { /* cancelled */ }
   }
   const record = async () => {
@@ -182,14 +249,14 @@ export default function Classroom() {
       toast({ title: 'Local recording started', desc: 'Free, on-device. Cloud recording is a paid service — see Costs.', type: 'info' })
     } catch { /* cancelled */ }
   }
-  const sendChat = (e) => { e.preventDefault(); if (!msg.trim()) return; const m = { type: 'chat', from: myName, text: msg.trim(), at: new Date().toISOString() }; setChat((c) => [...c, m]); broadcast(m); setMsg('') }
+  const sendChat = (e) => { e.preventDefault(); if (!msg.trim()) return; const m = { from: myName, text: msg.trim(), at: new Date().toISOString() }; setChat((c) => [...c, m]); channelRef.current?.send({ type: 'broadcast', event: 'chat', payload: m }); setMsg('') }
   const leave = () => { if (isTeacher) setEndOpen(true); else nav(-1) }
   const confirmEnd = (finish) => {
     setEndOpen(false)
     if (finish) { endSession(sessionId, { recorded: recording || undefined, durationMin: Math.round((Date.now() - startedAtRef.current) / 60000) || 45 }); toast({ title: 'Session marked complete', desc: 'Now fill in the lesson feedback.', type: 'success' }); nav('/teacher/feedback') }
     else nav(-1)
   }
-  const jitsiUrl = `https://meet.jit.si/BrightAcademy-${roomId(sessionId)}`
+  const jitsiUrl = `https://meet.jit.si/BrightAcademy-${roomName(sessionId)}`
   const students = sess.studentIds.map((id) => users.find((u) => u.id === id)).filter(Boolean)
 
   if (!joined) return (
@@ -200,16 +267,16 @@ export default function Classroom() {
       <div className="w-full max-w-md rounded-2xl bg-white/8 p-6">
         <p className="text-sm text-white/80">Check camera/mic before joining. Your browser will ask for permission.</p>
         {mediaError && <p className="mt-3 rounded-lg bg-coral-500/20 p-2.5 text-xs text-coral-200">{mediaError}</p>}
-        {connState === 'waiting' && <p className="mt-3 rounded-lg bg-sun-400/20 p-2.5 text-xs text-sun-300">Waiting for the teacher to start the class… we'll keep retrying.</p>}
         <Button variant="sun" className="mt-4 w-full" onClick={join} loading={connState === 'connecting'}>{isTeacher ? 'Start class & join' : 'Join the session'}</Button>
         <a href={jitsiUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-full border border-white/20 px-4 py-2.5 text-sm text-white/80 hover:bg-white/10"><ExternalLink className="h-4 w-4" /> Open in Jitsi Meet instead (free fallback)</a>
-        <p className="mt-4 text-[11px] leading-relaxed text-white/50">Built-in room uses free peer-to-peer WebRTC (PeerJS + public STUN) — no servers, no cost. For strict school/office networks a TURN server or a managed video service is needed — see <Link to="/costs" className="underline">Services & Costs</Link>.</p>
+        <p className="mt-4 text-[11px] leading-relaxed text-white/50">Built-in room: WebRTC video with free STUN + community TURN relay, signalled over the academy cloud — no cost. For heavy production use, see <Link to="/costs" className="underline">Services & Costs</Link>.</p>
       </div>
       <button type="button" onClick={() => nav(-1)} className="text-sm text-white/60 hover:text-white">← Back</button>
     </div>
   )
 
   const peerList = Object.entries(peers)
+  const teacherPresent = isTeacher || peerList.some(([, p]) => p.role === 'teacher')
   return (
     <div className="flex min-h-svh flex-col bg-brand-950 text-white">
       <header className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5">
@@ -217,23 +284,25 @@ export default function Classroom() {
           <img src={asset('logo-mark-t.png')} alt="" className="h-8 w-8 rounded-lg bg-white/95 object-contain p-0.5" />
           <div className="min-w-0"><p className="truncate text-sm font-bold">{course?.title}</p><p className="truncate text-xs text-white/60">{students.map((s) => s.name).join(', ')}</p></div>
           <Badge tone="bg-emerald-500/20 text-emerald-300"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> LIVE</Badge>
+          {connState === 'local' && <Badge tone="bg-sun-400/20 text-sun-300">sandbox — solo room</Badge>}
         </div>
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1 text-xs font-medium"><Clock className="h-3.5 w-3.5" /> {timer}</span>
+          <a href={jitsiUrl} target="_blank" rel="noreferrer" className="hidden rounded-lg bg-white/10 p-2 hover:bg-white/20 sm:block" aria-label="Open in Jitsi" title="Open in Jitsi (fallback)"><ExternalLink className="h-4 w-4" /></a>
           <button type="button" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast({ title: 'Class link copied', type: 'success' }) }} className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Copy link"><Copy className="h-4 w-4" /></button>
         </div>
       </header>
       <div className="flex flex-1 flex-col lg:flex-row">
         <div className="flex flex-1 flex-col p-3">
-          <div className={cn('grid flex-1 content-start gap-3', peerList.length === 0 ? 'grid-cols-1 max-w-2xl mx-auto w-full' : peerList.length <= 1 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3')}>
+          <div className={cn('grid flex-1 content-start gap-3', peerList.length === 0 ? 'mx-auto w-full max-w-2xl grid-cols-1' : peerList.length <= 1 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3')}>
             <VideoTile stream={localStream} name={myName} muted self off={!cam} />
             {peerList.map(([pid, p]) => <VideoTile key={pid} stream={p.stream} name={p.name || 'Participant'} />)}
-            {peerList.length === 0 && <p className="rounded-xl border border-dashed border-white/15 p-6 text-center text-sm text-white/50">{isTeacher ? 'Waiting for students to join… Share the class link or ask them to press Join in their portal.' : 'Connecting you to the room…'}</p>}
+            {peerList.length === 0 && <p className="rounded-xl border border-dashed border-white/15 p-6 text-center text-sm text-white/50">{connState === 'local' ? 'Sandbox mode is single-browser — live multi-device rooms run on the cloud site.' : isTeacher ? 'Waiting for students to join… Share the class link or ask them to press Join in their portal.' : teacherPresent ? 'Connecting…' : 'Waiting for your teacher to join…'}</p>}
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
             <button type="button" onClick={toggleMic} className={cn('rounded-full p-3.5', mic ? 'bg-white/10 hover:bg-white/20' : 'bg-coral-500 hover:bg-coral-600')} aria-label="Toggle microphone">{mic ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}</button>
             <button type="button" onClick={toggleCam} className={cn('rounded-full p-3.5', cam ? 'bg-white/10 hover:bg-white/20' : 'bg-coral-500 hover:bg-coral-600')} aria-label="Toggle camera">{cam ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}</button>
-            <button type="button" onClick={share} className={cn('rounded-full p-3.5', sharing ? 'bg-brand-500' : 'bg-white/10 hover:bg-white/20')} aria-label="Share screen"><MonitorUp className="h-5 w-5" /></button>
+            <button type="button" onClick={share} disabled={!localStream} className={cn('rounded-full p-3.5 disabled:opacity-40', sharing ? 'bg-brand-500' : 'bg-white/10 hover:bg-white/20')} aria-label="Share screen" title={localStream ? 'Share screen' : 'Screen share needs camera/mic access'}><MonitorUp className="h-5 w-5" /></button>
             <button type="button" onClick={record} className={cn('rounded-full p-3.5', recording ? 'bg-coral-500' : 'bg-white/10 hover:bg-white/20')} aria-label="Record">{recording ? <Square className="h-5 w-5" /> : <Circle className="h-5 w-5" />}</button>
             <button type="button" onClick={leave} className="rounded-full bg-coral-500 px-6 py-3.5 hover:bg-coral-600" aria-label="Leave"><PhoneOff className="h-5 w-5" /></button>
           </div>
@@ -253,12 +322,12 @@ export default function Classroom() {
               <form onSubmit={sendChat} className="flex gap-2 border-t border-ink/8 p-2.5"><Input app placeholder="Message the class…" value={msg} onChange={(e) => setMsg(e.target.value)} /><Button app type="submit" size="sm" disabled={!msg.trim()}><Send className="h-4 w-4" /></Button></form>
             </div>
           )}
-          {tab === 'whiteboard' && <Whiteboard send={sendWb} remoteStrokes={wbBus} />}
+          {tab === 'whiteboard' && <Whiteboard send={sendWb} bus={wbBus} />}
           {tab === 'people' && (
             <div className="flex-1 overflow-y-auto thin-scroll p-3">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-ink/50">In the room ({peerList.length + 1})</p>
               <p className="flex items-center gap-2 py-1.5 text-sm"><Avatar name={myName} size="xs" /> {myName} (you)</p>
-              {peerList.map(([pid, p]) => <p key={pid} className="flex items-center gap-2 py-1.5 text-sm"><Avatar name={p.name || '?'} size="xs" /> {p.name || 'Participant'}</p>)}
+              {peerList.map(([pid, p]) => <p key={pid} className="flex items-center gap-2 py-1.5 text-sm"><Avatar name={p.name || '?'} size="xs" /> {p.name || 'Participant'} {p.role === 'teacher' && <Badge tone="bg-brand-100 text-brand-700">teacher</Badge>}</p>)}
               {isTeacher && <><p className="mb-2 mt-4 text-[11px] font-bold uppercase tracking-wider text-ink/50">Attendance</p>
                 {students.map((st) => <label key={st.id} className="flex items-center justify-between py-1.5 text-sm"><span className="flex items-center gap-2"><Avatar name={st.name} size="xs" /> {st.name}</span>
                   <input type="checkbox" defaultChecked={sess.attendance?.[st.id] !== false} onChange={(e) => markAttendance(sess.id, st.id, e.target.checked)} className="h-4 w-4 accent-brand-600" /></label>)}</>}
