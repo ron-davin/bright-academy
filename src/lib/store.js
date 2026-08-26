@@ -217,11 +217,18 @@ export const useStore = create(
 
       // ---------- cloud plumbing ----------
       cloudRefresh: async (userId) => {
-        try {
-          const loaded = await loadCloudState(supabase)
-          resetShadow(loaded)
-          set({ ...loaded, currentUserId: userId ?? get().currentUserId, cloudReady: true })
-        } catch (e) { console.warn('[cloud] load failed', e); set({ cloudReady: true }); toast({ title: 'Cloud connection problem', desc: e.message, type: 'error' }) }
+        let lastErr = null
+        for (let i = 0; i < 3; i++) { // retry: fresh tokens can 401 for ~1s ("JWT issued at future" clock skew)
+          try {
+            const loaded = await loadCloudState(supabase)
+            resetShadow(loaded)
+            set({ ...loaded, currentUserId: userId ?? get().currentUserId, cloudReady: true })
+            return
+          } catch (e) { lastErr = e; await new Promise((r) => setTimeout(r, 1200)) }
+        }
+        console.warn('[cloud] load failed', lastErr)
+        set({ cloudReady: true, currentUserId: userId ?? get().currentUserId })
+        toast({ title: 'Cloud connection problem', desc: lastErr?.message || 'Could not load your data — please refresh.', type: 'error' })
       },
       useLocalSandbox: () => { setLocalModeForced(true); window.location.href = import.meta.env.BASE_URL },
       backToCloud: () => { setLocalModeForced(false); window.location.href = import.meta.env.BASE_URL },

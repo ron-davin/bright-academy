@@ -24,7 +24,7 @@ export default function AuthDialog() {
   const [show, setShow] = useState(false); const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   const [f, setF] = useState({ name: '', email: '', password: '', confirm: '', role: 'parent', timezone: detectTimezone(), childName: '', childAge: '' })
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
-  const done = (user) => { closeAuth(); setErr(''); toast({ title: `Welcome back, ${user.firstName}!`, type: 'success' }); nav(authRedirect || dashboardPath(user)) }
+  const done = (user) => { closeAuth(); setErr(''); toast({ title: `Welcome back, ${user?.firstName || 'friend'}!`, type: 'success' }); nav(user ? (authRedirect || dashboardPath(user)) : '/') }
   const onSignIn = async (e) => { e.preventDefault(); setBusy(true); setErr(''); try { done(await signIn(f.email, f.password)) } catch (ex) { setErr(ex.message) } finally { setBusy(false) } }
   const onSignUp = async (e) => { e.preventDefault(); if (f.password !== f.confirm) return setErr('Passwords do not match.'); setBusy(true); setErr(''); try { const u = await signUp(f); closeAuth(); toast({ title: 'Account created!', desc: u.role === 'teacher' ? 'Your application is pending review.' : 'Let’s find the right course.', type: 'success' }); nav(authRedirect || dashboardPath(u)) } catch (ex) { setErr(ex.message) } finally { setBusy(false) } }
   const cloud = useStore((st) => st.cloud)
