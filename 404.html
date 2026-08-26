@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Bright Academy</title>
+    <script>
+      // Redirect deep links to index.html preserving the path (GitHub Pages SPA trick)
+      var segments = 1; // repo name segment: /bright-academy/
+      var l = window.location;
+      var pathParts = l.pathname.split('/');
+      var base = pathParts.slice(0, 1 + segments).join('/');
+      var rest = pathParts.slice(1 + segments).join('/');
+      l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + base + '/?/' + rest.replace(/&/g, '~and~') + (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') + l.hash);
+    </script>
+  </head>
+  <body></body>
+</html>
