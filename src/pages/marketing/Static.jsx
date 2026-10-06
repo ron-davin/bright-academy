@@ -82,14 +82,14 @@ export function Privacy() {
 }
 
 const COSTS = [
-  { icon: Server, name: 'Hosting (this site)', now: 'GitHub Pages — FREE', notes: 'Static hosting, free for public repos. Custom domain ≈ $10–15/yr. A real backend (below) is the actual cost driver.' },
+  { icon: Server, name: 'Hosting (this site)', now: 'Netlify — FREE (100GB/mo bandwidth)', notes: 'Static hosting, free for public repos. Custom domain ≈ $10–15/yr. A real backend (below) is the actual cost driver.' },
   { icon: Database, name: 'Backend, database & auth', now: 'Supabase integration built in — FREE tier (500MB DB, 50k monthly users)', notes: 'The app auto-detects a Supabase project (see SETUP-CLOUD.md in the repo): real cross-device accounts, shared Postgres with row-level security, and realtime sync. Free tier pauses after a week of inactivity; Supabase Pro ≈ $25/mo removes limits. Until connected, the site runs in local-sandbox mode.' },
   { icon: Video, name: 'Live video classroom', now: 'Jitsi Meet embed + built-in P2P room — FREE', notes: 'Darstop uses LiveKit. Managed video (LiveKit Cloud / Daily.co / 100ms) has free tiers (e.g. Daily ≈ 10k participant-minutes/mo), then usage pricing ≈ $0.004–0.007 per participant-minute (~$1.5–3 per 1-on-1 hour-class at scale). Demo rooms use free public STUN (Google/Cloudflare/Twilio) signalled over Supabase Realtime — fine for typical home/mobile networks. Very strict or symmetric-NAT networks need a TURN relay: Metered has a free 20GB/mo account tier (then ≈ $0.10–0.40/GB), or use a managed video service.' },
   { icon: HardDrive, name: 'Lesson recording & storage', now: 'Local recording to a file on the teacher’s device — FREE', notes: 'Cloud recording (LiveKit Egress, Daily recording ≈ $0.0135/min) plus storage (S3/Backblaze ≈ $0.005–0.023/GB/mo) and streaming bandwidth. Budget roughly $5–20/mo per active teacher at moderate volume.' },
   { icon: CreditCard, name: 'Payments & payouts', now: 'Simulated checkout — FREE', notes: 'Stripe ≈ 2.9% + $0.30 per charge (no monthly fee); subscriptions/invoicing included. Teacher payouts via Stripe Connect or Wise incur transfer fees ≈ 0.5–2%.' },
   { icon: BellRing, name: 'Email / SMS / push notifications', now: 'In-app notifications only — FREE', notes: 'Email: Resend/Brevo free tiers (≈ 3k emails/mo), then ≈ $10–20/mo. SMS via Twilio ≈ $0.008–0.05 per message. Web push is free but needs a backend.' },
   { icon: Bot, name: 'AI lesson-plan assistant', now: 'Template-based generator — FREE', notes: 'Darstop has an AI "Prep Assistant". Wiring a real LLM (e.g. Claude API) is usage-billed — typically fractions of a cent to a few cents per lesson plan, depending on model and length.' },
-  { icon: Globe, name: 'Custom domain & SSL', now: 'ron-davin.github.io/bright-academy — FREE', notes: 'brightacademy.com-style domain ≈ $10–15/yr. SSL is free (GitHub Pages / Let’s Encrypt / Cloudflare).' },
+  { icon: Globe, name: 'Custom domain & SSL', now: 'bright-academy.netlify.app — FREE', notes: 'brightacademy.com-style domain ≈ $10–15/yr. SSL is free (GitHub Pages / Let’s Encrypt / Cloudflare).' },
   { icon: ShieldCheck, name: 'Background checks & compliance', now: 'Not applicable in demo', notes: 'Real teacher vetting (e.g. Checkr) ≈ $25–80 per teacher. COPPA/GDPR compliance mostly process cost, not software.' },
 ]
 

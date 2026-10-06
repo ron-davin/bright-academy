@@ -27,3 +27,4 @@ dist-ssr
 .supabase-service-key.local
 .admin-credentials.local
 *.local
+.netlify

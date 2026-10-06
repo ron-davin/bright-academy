@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build and publish dist/ to the gh-pages branch (GitHub Pages)
 set -euo pipefail
-npm run build
+BASE_PATH=/bright-academy/ npm run build
 touch dist/.nojekyll
 cd dist
 git init -q -b gh-pages
