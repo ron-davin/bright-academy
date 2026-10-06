@@ -75,7 +75,10 @@ export const useStore = create(
       signIn: async (email, password) => {
         const s = get()
         if (s.cloud) {
-          const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+          let data, error
+          try { ({ data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })) }
+          catch { throw new Error('Can’t reach the academy server right now (it may be waking up). Please try again in a minute.') }
+          if (error && /fetch|network/i.test(error.message)) throw new Error('Can’t reach the academy server right now (it may be waking up). Please try again in a minute.')
           if (error) throw new Error(error.message === 'Invalid login credentials' ? 'Wrong email or password. Demo accounts exist only after the cloud seed is run — or use “Explore local demo”.' : error.message)
           await get().cloudRefresh(data.user.id)
           return get().users.find((u) => u.id === data.user.id)
