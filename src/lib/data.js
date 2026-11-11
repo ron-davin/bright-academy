@@ -1,13 +1,23 @@
-// Seed content for Bright Academy — Islamic lessons only (Quran, Arabic, Islamic Studies)
+// Bright Academy — general online academy content
 export const BRAND = {
   name: 'Bright Academy',
-  tagline: 'Live Quran, Arabic & Islamic Studies classes for kids & teens',
   email: 'hello@brightacademy.example',
   phone: '+1 (555) 010-2030',
-  address: 'Online · Serving families worldwide',
-  social: { facebook: '#', instagram: '#', telegram: '#', youtube: '#' },
 }
 
+// color = Tailwind classes for chips / calendar blocks
+export const SUBJECTS = [
+  { id: 'math', name: 'Math', icon: 'Calculator', color: 'bg-sky-100 text-sky-800 border-sky-200', dot: 'bg-sky-500', desc: 'From counting and fractions to algebra and geometry — confidence first.' },
+  { id: 'science', name: 'Science', icon: 'FlaskConical', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500', desc: 'Biology, chemistry and physics explained with real-life examples.' },
+  { id: 'esl', name: 'English (ESL)', icon: 'Languages', color: 'bg-violet-100 text-violet-800 border-violet-200', dot: 'bg-violet-500', desc: 'Speaking, reading and writing English with patient native-level tutors.' },
+  { id: 'programming', name: 'Computer Programming', icon: 'Code2', color: 'bg-slate-200 text-slate-800 border-slate-300', dot: 'bg-slate-600', desc: 'Scratch for beginners, then Python and web — building real projects.' },
+  { id: 'quran', name: "Qur'an", icon: 'BookOpen', color: 'bg-teal-100 text-teal-800 border-teal-200', dot: 'bg-teal-600', desc: 'Reading, Tajweed and memorisation with qualified teachers.' },
+  { id: 'arabic', name: 'Arabic', icon: 'Type', color: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500', desc: 'Conversational and classical Arabic for kids and teens.' },
+  { id: 'islamic', name: 'Islamic Studies', icon: 'Landmark', color: 'bg-rose-100 text-rose-800 border-rose-200', dot: 'bg-rose-500', desc: 'Beliefs, worship, history and good character.' },
+]
+export const subjectById = (id) => SUBJECTS.find((s) => s.id === id) || { id, name: id || 'Class', color: 'bg-gray-100 text-gray-800 border-gray-200', dot: 'bg-gray-400' }
+
+// Homepage teacher strip (static marketing content)
 export const TEACHERS = [
   {
     id: 't1', slug: 'nurlaila-i', name: 'Ustoza Nurlaila I.', short: 'Nurlaila I.', title: 'Ustoza', gender: 'f',
@@ -95,218 +105,11 @@ export const TEACHERS = [
   },
 ]
 
-export const CATEGORIES = [
-  { id: 'quran', slug: 'quran', name: 'Quran', emoji: '📖', tagline: 'Reading, Tajweed & Hifz', desc: 'From Noorani Qaida to fluent recitation and memorisation with Ijazah-certified teachers.', color: 'bg-brand-50 text-brand-700' },
-  { id: 'arabic', slug: 'arabic', name: 'Arabic Language', emoji: '🔤', tagline: 'Speak, read & understand', desc: 'Conversational Arabic for kids, Quranic Arabic and classical grammar for teens.', color: 'bg-sun-400/15 text-sun-600' },
-  { id: 'islamic-studies', slug: 'islamic-studies', name: 'Islamic Studies', emoji: '🕌', tagline: 'Aqeedah, Fiqh, Seerah & Hadith', desc: 'Beliefs, worship and character — taught as daily practice, not just facts.', color: 'bg-emerald-50 text-emerald-700' },
-  { id: 'little-muslims', slug: 'little-muslims', name: 'Little Muslims (4–8)', emoji: '🌙', tagline: 'Gentle first steps', desc: 'Qaida, daily duas, salah and stories for the youngest learners.', color: 'bg-coral-500/10 text-coral-600' },
-]
-
-export const SUBJECTS = ['Noorani Qaida', 'Quran Recitation', 'Tajweed', 'Hifz (Memorization)', 'Arabic Language', 'Quranic Arabic', 'Arabic Grammar', 'Islamic Studies', 'Fiqh & Aqeedah', 'Seerah & Prophets', 'Hadith', 'Duas & Salah']
-
-const plans = (base) => [
-  { id: 'starter', name: 'Starter Plan', tag: '', perWeek: 1, price: base, desc: 'Steady progress over time with focused weekly sessions', features: ['Basic course material', 'Weekly assignments', 'Feedback on progress'] },
-  { id: 'growth', name: 'Growth Plan', tag: 'Most Popular', perWeek: 2, price: base * 2, desc: 'Noticeable improvement in 4–6 weeks with consistent practice', features: ['All Starter features', 'Monthly progress reports', 'Live Q&A sessions', 'Course certificate'] },
-  { id: 'accelerated', name: 'Accelerated Plan', tag: 'Best Results', perWeek: 3, price: base * 3, desc: 'Fast-track to top performance with intensive coaching', features: ['All Growth features', 'One-on-one mentoring', 'Priority support', 'Advanced materials'] },
-]
-
-export const COURSES = [
-  {
-    id: 'c1', slug: 'noorani-qaida-first-steps-to-reading-quran', title: 'Noorani Qaida: First Steps to Reading Quran', subject: 'Noorani Qaida', category: 'quran', emoji: '🔠',
-    teacherId: 't1', type: 'individual', level: 'Beginner', ages: [4, 9], weeks: 12, price: 80, rating: 5.0, reviews: 19, slots: 30, featured: true,
-    summary: 'A gentle, structured program that takes complete beginners from Arabic letters to reading Quranic words and short surahs independently.',
-    outcome: 'Read Quranic words and short surahs independently with correct letter sounds within 90 days.',
-    skills: ['Arabic letters & sounds', 'Harakat (fatha, kasra, damma)', 'Joining letters', 'Sukoon, Tanween & Madd basics'],
-    achieve: ['Recognise and pronounce all 29 Arabic letters from their correct Makhraj', 'Read words with short and long vowels fluently', 'Read Surah Al-Fatihah and the last 5 surahs from the Mushaf', 'Build a daily 10-minute Quran reading habit'],
-    description: 'Our Noorani Qaida program is designed for children (and adults!) who cannot yet read Arabic script. Across 12 weeks we move lesson by lesson through the Qaida: individual letters, letters joined in words, harakat, tanween, sukoon, shaddah and the long vowels — always with the correct Makhraj from the very first day. Each live 1-on-1 lesson includes listening, repetition, reading practice and a short homework sheet. Parents receive a weekly note on what to practise at home.',
-    curriculum: ['Letters & Makharij (weeks 1–3)', 'Joining letters & reading words (weeks 4–5)', 'Harakat, Tanween & Sukoon (weeks 6–8)', 'Shaddah, Madd & Leen letters (weeks 9–10)', 'Reading from the Mushaf: Al-Fatihah & short surahs (weeks 11–12)'],
-  },
-  {
-    id: 'c2', slug: 'quran-recitation-with-tajweed', title: 'Quran Recitation with Tajweed (Nazirah)', subject: 'Quran Recitation', category: 'quran', emoji: '📖',
-    teacherId: 't3', type: 'individual', level: 'Beginner', ages: [7, 16], weeks: 12, price: 80, rating: 5.0, reviews: 24, slots: 22, featured: true,
-    summary: 'Recite the Quran fluently and beautifully. Live 1-on-1 correction of Makharij and the core rules of Tajweed, page by page.',
-    outcome: 'Recite any page of the Quran fluently with correct Makharij and the core Tajweed rules within 12 weeks.',
-    skills: ['Makharij & Sifaat', 'Noon Sakinah & Tanween rules', 'Meem Sakinah rules', 'Madd & Qalqalah'],
-    achieve: ['Recite with correct articulation of every letter', 'Apply Izhar, Idgham, Iqlab and Ikhfa automatically', 'Recite one full Juz with a Tajweed accuracy of 90%+', 'Understand the etiquette (adab) of reciting the Quran'],
-    description: 'This is our flagship recitation course for students who can already read Arabic but want to recite with confidence and beauty. Shaykh Rayyannoor listens to every ayah, corrects in real time and explains the rule behind each correction. We start with Makharij and Sifaat, move into the rules of Noon and Meem Sakinah, then Madd, Qalqalah, Laam and Raa. Students recite from the Mushaf every lesson and get a personalised Tajweed scorecard every month.',
-    curriculum: ['Makharij & Sifaat of letters', 'Noon Sakinah & Tanween (4 rules)', 'Meem Sakinah (3 rules)', 'Types of Madd', 'Qalqalah, Laam & Raa rules', 'Waqf (stopping) and recitation etiquette'],
-  },
-  {
-    id: 'c3', slug: 'juz-amma-hifz-program', title: 'Juz Amma Hifz Program (Memorization)', subject: 'Hifz (Memorization)', category: 'quran', emoji: '🧠',
-    teacherId: 't5', type: 'individual', level: 'Beginner', ages: [6, 16], weeks: 24, price: 80, rating: 5.0, reviews: 17, slots: 14, featured: true,
-    summary: 'Memorise the 37 surahs of Juz Amma with Tajweed using a proven Sabaq–Sabqi–Manzil revision system and a personal Hifz tracker.',
-    outcome: 'Memorise all of Juz Amma (37 surahs) with Tajweed and a strong revision routine in 6 months.',
-    skills: ['Memorisation technique', 'Daily revision system', 'Tajweed application', 'Recitation tests'],
-    achieve: ['Memorise Juz Amma with correct Tajweed', 'Build a 15–20 minute daily Hifz routine', 'Pass monthly recitation tests with 95%+ accuracy', 'Lead the family in salah with newly memorised surahs'],
-    description: 'Memorisation is a journey — we make it structured and joyful. Each lesson has three parts: Sabaq (new lines), Sabqi (recent revision) and Manzil (old revision). Shaykh Jamie sets a realistic weekly target based on your child’s pace, records a model recitation for home practice, and tests each surah before moving on. Parents get a Hifz tracker and a WhatsApp-style weekly summary inside the app.',
-    curriculum: ['An-Naas to Al-Feel', 'Al-Humazah to Ad-Duha', 'Al-Layl to Al-Fajr', 'Al-Ghashiyah to At-Tariq', 'Al-Buruj to At-Takwir', 'Abasa to An-Naba + full-Juz test'],
-  },
-  {
-    id: 'c4', slug: 'arabic-for-kids-level-1', title: 'Arabic for Kids: Speak, Read & Write (Level 1)', subject: 'Arabic Language', category: 'arabic', emoji: '🗣️',
-    teacherId: 't2', type: 'group', level: 'Beginner', ages: [6, 12], weeks: 12, price: 60, rating: 4.9, reviews: 21, slots: 8, featured: true, groupSize: 6,
-    summary: 'A fun, interactive group course where children learn 300+ Arabic words, simple sentences and everyday conversation through games, songs and stories.',
-    outcome: 'Hold a simple Arabic conversation, read and write short sentences and know 300+ words by the end of the term.',
-    skills: ['Alphabet & phonics', 'Everyday vocabulary', 'Simple sentences', 'Speaking confidence'],
-    achieve: ['Introduce themselves and their family in Arabic', 'Read and write 300+ words and simple sentences', 'Use greetings, numbers, colours, food and school vocabulary', 'Present a short Arabic talk at the end-of-term showcase'],
-    description: 'Level 1 of our Arabic for Kids pathway. Small groups (max 6) keep every child speaking in every lesson. Ustoza Farwiza uses total-physical-response games, songs, flashcards and picture stories so Arabic sounds become natural before children read and write them. Homework is short and playful (record yourself saying 5 words!). Two further levels take children to confident reading and conversation.',
-    curriculum: ['Greetings & introductions', 'My family & home', 'Numbers, colours & shapes', 'Food & drink', 'School & daily routine', 'Showcase: my Arabic presentation'],
-  },
-  {
-    id: 'c5', slug: 'quranic-arabic-understand-what-you-recite', title: 'Quranic Arabic: Understand What You Recite', subject: 'Quranic Arabic', category: 'arabic', emoji: '🔤',
-    teacherId: 't6', type: 'group', level: 'Intermediate', ages: [10, 18], weeks: 12, price: 60, rating: 4.9, reviews: 14, slots: 6, featured: true, groupSize: 8,
-    summary: 'Learn the 300 most frequent words of the Quran and the grammar you need to understand ayat and duas directly — no translation needed.',
-    outcome: 'Understand ~70% of Quranic vocabulary and translate simple ayat and the daily duas word-by-word.',
-    skills: ['High-frequency Quranic words', 'Ism, Fi‘l, Harf', 'Pronouns & prepositions', 'Word-by-word translation'],
-    achieve: ['Recognise the 300 most frequent Quranic words', 'Translate Surah Al-Fatihah and the last 10 surahs word by word', 'Understand what you say in salah', 'Read simple Arabic texts with basic grammar'],
-    description: 'Designed for students who can read Arabic and want the Quran to “make sense”. We start with the most frequent words (the top 300 cover ~70% of the Quran), then layer in essential grammar: the three word types, pronouns, prepositions, verb patterns and idafa. Every lesson ends with a live translation challenge from the Mushaf. Flashcard decks and quizzes are included in the app.',
-    curriculum: ['Top 50 words & Al-Fatihah', 'Ism, Fi‘l, Harf', 'Pronouns & possession (idafa)', 'Past & present verbs', 'Prepositions & word order', 'Translating the last 10 surahs'],
-  },
-  {
-    id: 'c6', slug: 'islamic-studies-foundations', title: 'Islamic Studies Foundations: Aqeedah, Fiqh & Akhlaq', subject: 'Islamic Studies', category: 'islamic-studies', emoji: '🕌',
-    teacherId: 't4', type: 'individual', level: 'Beginner', ages: [6, 14], weeks: 12, price: 80, rating: 4.9, reviews: 16, slots: 18, featured: true,
-    summary: 'A comprehensive Islamic education program covering beliefs, worship and character — with a weekly ‘Amal challenge so learning becomes daily practice.',
-    outcome: 'Know the pillars of Iman and Islam, perform wudu and salah independently, and apply Islamic manners at home and school.',
-    skills: ['Six pillars of Iman', 'Wudu & Salah step by step', 'Daily duas & dhikr', 'Akhlaq & adab'],
-    achieve: ['Explain the pillars of Islam and Iman in their own words', 'Perform wudu and the five daily prayers correctly and independently', 'Memorise 20 daily duas with meanings', 'Practise honesty, kindness and respect through weekly ‘Amal challenges'],
-    description: 'This program gives children an authentic, age-appropriate understanding of Islam that they can live. Shaykh Abdul-azyz teaches Aqeedah with stories and questions children actually ask, Fiqh with hands-on practice (we do wudu together on camera!), and Akhlaq through the Seerah and real scenarios. Every week has a practical challenge and a short quiz; every month parents receive a report on knowledge and practice.',
-    curriculum: ['Who is Allah? Tawheed for kids', 'The six pillars of Iman', 'Purification & wudu', 'Salah: steps, timings & mistakes', 'Fasting, Zakah & Hajj basics', 'Akhlaq: manners of the Prophet ﷺ'],
-  },
-  {
-    id: 'c7', slug: 'seerah-and-stories-of-the-prophets', title: 'Seerah & Stories of the Prophets', subject: 'Seerah & Prophets', category: 'islamic-studies', emoji: '🕋',
-    teacherId: 't7', type: 'group', level: 'Beginner', ages: [7, 14], weeks: 12, price: 60, rating: 4.8, reviews: 12, slots: 9, groupSize: 8,
-    summary: 'Travel through the life of the Prophet ﷺ and the stories of 25 prophets in a lively, discussion-based group class with maps, timelines and lessons for today.',
-    outcome: 'Narrate the key events of the Seerah in order and draw practical lessons from the lives of the Prophets.',
-    skills: ['Seerah timeline', '25 Prophets', 'Lessons & values', 'Discussion & presentation'],
-    achieve: ['Recall the major events of the Seerah from birth to Hijrah to Madinah', 'Know the stories of 25 Prophets and their key lessons', 'Connect prophetic character to situations at school and home', 'Create a personal illustrated Seerah timeline'],
-    description: 'Shaykh Wanhar brings the Seerah alive with storytelling, maps and role-play. Students build their own illustrated timeline across the term, discuss “what would the Prophet ﷺ do?” scenarios and present a story of a Prophet to the group at the end of the course.',
-    curriculum: ['Makkah before Islam & the birth of the Prophet ﷺ', 'Revelation & the early Muslims', 'Boycott, Ta’if & Isra wal Mi’raj', 'Hijrah & the first years in Madinah', 'Stories of Adam, Nuh, Ibrahim & Musa', 'Stories of Yusuf, Isa and the final years'],
-  },
-  {
-    id: 'c8', slug: '40-hadith-for-young-muslims', title: 'Hadith for Young Muslims: 40 Hadith of Imam Nawawi', subject: 'Hadith', category: 'islamic-studies', emoji: '📜',
-    teacherId: 't7', type: 'group', level: 'Intermediate', ages: [10, 17], weeks: 12, price: 60, rating: 4.9, reviews: 8, slots: 7, groupSize: 8,
-    summary: 'Memorise, understand and live the 40 Hadith of Imam Nawawi — the classic foundation text — in a teen-friendly weekly circle.',
-    outcome: 'Memorise 20 hadith in Arabic with meanings and explain the lessons of all 40.',
-    skills: ['Hadith memorisation', 'Meaning & context', 'Applying hadith', 'Hadith terminology basics'],
-    achieve: ['Memorise 20 hadith in Arabic with translation', 'Explain the core lesson of each of the 40 hadith', 'Understand basic hadith terminology (sahih, hasan, isnad)', 'Apply one hadith per week as a personal challenge'],
-    description: 'A weekly circle for teens built around Imam Nawawi’s 40 Hadith. Each session covers 3–4 hadith with context, vocabulary and practical application, followed by discussion. Students keep a hadith journal and lead a short reflection once per term.',
-    curriculum: ['Intentions, Islam–Iman–Ihsan', 'Halal, haram & the heart', 'Sincerity & brotherhood', 'Avoiding harm & good character', 'Dua, repentance & hope', 'Review & memorisation test'],
-  },
-  {
-    id: 'c9', slug: 'tajweed-mastery-and-ijazah-preparation', title: 'Tajweed Mastery & Ijazah Preparation', subject: 'Tajweed', category: 'quran', emoji: '🎓',
-    teacherId: 't5', type: 'individual', level: 'Advanced', ages: [12, 18], weeks: 24, price: 120, rating: 5.0, reviews: 9, slots: 4,
-    summary: 'Advanced Tajweed theory (Tuhfat al-Atfal & Al-Jazariyyah) with rigorous recitation practice for students aiming for Ijazah in Hafs ‘an ‘Asim.',
-    outcome: 'Recite the complete Quran with precise Tajweed and pass the Ijazah recitation assessment.',
-    skills: ['Tuhfat al-Atfal', 'Al-Jazariyyah basics', 'Precise Makharij & Sifaat', 'Full-Quran recitation'],
-    achieve: ['Explain Tajweed rules with their evidences from the classical texts', 'Recite with precision under examination conditions', 'Complete a full Quran recitation (khatmah) to the Sheikh', 'Receive a recommendation for Ijazah assessment'],
-    description: 'For serious students. We study the classical Tajweed poems, correct subtle errors in Makharij and Sifaat, and progress through the Mushaf juz by juz until a full khatmah is recited to the Sheikh. Progress is recorded in a detailed recitation log.',
-    curriculum: ['Tuhfat al-Atfal (full)', 'Makharij & Sifaat in depth', 'Madd in detail & rare rules', 'Al-Jazariyyah selections', 'Khatmah recitation (juz 1–15)', 'Khatmah recitation (juz 16–30) & assessment'],
-  },
-  {
-    id: 'c10', slug: 'daily-duas-and-salah-for-little-muslims', title: 'Daily Duas & Salah for Little Muslims', subject: 'Duas & Salah', category: 'little-muslims', emoji: '🌙',
-    teacherId: 't1', type: 'group', level: 'Beginner', ages: [4, 8], weeks: 8, price: 50, rating: 5.0, reviews: 11, slots: 10, groupSize: 6,
-    summary: 'Songs, stories and gentle repetition help little ones memorise 15 daily duas, learn wudu and the movements of salah.',
-    outcome: 'Memorise 15 daily duas and perform wudu and a two-rak‘ah salah with help.',
-    skills: ['15 daily duas', 'Wudu steps', 'Salah movements', 'Surah Al-Fatihah'],
-    achieve: ['Recite morning, eating, sleeping and masjid duas from memory', 'Perform wudu with a parent’s supervision', 'Know the positions and words of salah', 'Love and look forward to their Islam lessons!'],
-    description: 'A joyful 8-week group class for ages 4–8. Each 30-minute lesson uses songs, puppets, stories and movement breaks. Parents join the last 5 minutes to learn what to practise at home.',
-    curriculum: ['Bismillah & our first duas', 'Duas for eating & sleeping', 'Wudu song & practice', 'Salah: standing, bowing, prostrating', 'Surah Al-Fatihah', 'Our first full salah together'],
-  },
-  {
-    id: 'c11', slug: 'arabic-grammar-nahw-and-sarf-intensive', title: 'Arabic Grammar (Nahw) & Morphology (Sarf) Intensive', subject: 'Arabic Grammar', category: 'arabic', emoji: '📚',
-    teacherId: 't2', type: 'individual', level: 'Intermediate', ages: [13, 18], weeks: 16, price: 80, rating: 4.9, reviews: 6, slots: 8,
-    summary: 'Classical Arabic grammar and morphology for teens who want to read the Quran, Hadith and Islamic texts in the original.',
-    outcome: 'Parse (i‘rab) simple Quranic sentences and read vowelled classical texts with understanding.',
-    skills: ['Nahw: sentence structure', 'Sarf: verb patterns', 'I‘rab (parsing)', 'Reading classical texts'],
-    achieve: ['Identify subject, predicate, object and their cases', 'Conjugate regular verbs in past, present and imperative', 'Parse ayat from Juz Amma', 'Read a page of Riyad as-Salihin with understanding'],
-    description: 'Based on Al-Ajurrumiyyah and a modern Sarf workbook, this 1-on-1 intensive gives teens a real foundation in classical Arabic. Every lesson applies the grammar to the Quran and Hadith immediately.',
-    curriculum: ['Kalimah & the nominal sentence', 'Cases & signs of i‘rab', 'The verbal sentence', 'Sarf: the three-letter verb', 'Derived forms & nouns', 'Reading & parsing practice'],
-  },
-  {
-    id: 'c12', slug: '90-day-quran-reading-bootcamp', title: '90-Day Quran Reading Bootcamp (Group)', subject: 'Quran Recitation', category: 'quran', emoji: '🚀',
-    teacherId: 't3', type: 'group', level: 'Beginner', ages: [8, 16], weeks: 12, price: 60, rating: 5.0, reviews: 7, slots: 5, groupSize: 6,
-    summary: 'A comprehensive group Quran program designed to help students build fluent reading and basic Tajweed in 90 days with daily accountability.',
-    outcome: 'Go from slow, hesitant reading to fluent recitation of any page with basic Tajweed in 90 days.',
-    skills: ['Fluency drills', 'Basic Tajweed', 'Daily reading habit', 'Group recitation'],
-    achieve: ['Read any page of the Mushaf without stopping', 'Apply basic Tajweed (Madd, Ghunnah, Qalqalah)', 'Complete 2 Juz of reading during the bootcamp', 'Keep a 90-day reading streak'],
-    description: 'Small groups (max 6) meet live with Shaykh Rayyannoor, with daily reading check-ins in the app. Friendly competition, streaks and weekly fluency tests keep everyone motivated.',
-    curriculum: ['Diagnostic & fluency baseline', 'Long vowels & Madd', 'Ghunnah & Qalqalah', 'Stopping & starting correctly', 'Fluency drills: Juz 29–30', 'Final fluency test & celebration'],
-  },
-]
-COURSES.forEach((c) => { c.plans = plans(c.price) })
-
-export const HERO_CARDS = [
-  { subject: 'Quran', label: 'HIFZ · 6 MONTHS', big: 'Juz Amma', quote: '“He recites the whole of Juz Amma in salah now — with Tajweed.”', who: 'Yusuf, 9', tone: 'from-brand-50 to-white', icon: '📖' },
-  { subject: 'Tajweed', label: 'RULES MASTERED · 1 TERM', big: '0 → 15', quote: '“Her recitation makes my mother cry. Alhamdulillah.”', who: 'Zaynab, 12', tone: 'from-sun-400/15 to-white', icon: '🎧' },
-  { subject: 'Arabic', label: 'CEFR LEVEL · 3 MONTHS', big: 'A0 → A2', quote: '“She surprises the family with Arabic at dinner every night.”', who: 'Maryam, 10', tone: 'from-emerald-50 to-white', icon: '🔤' },
-  { subject: 'Islamic Studies', label: 'SALAH · 8 WEEKS', big: 'On his own', quote: '“He now wakes us up for Fajr. I’m not even joking.”', who: 'Ibrahim, 8', tone: 'from-coral-500/10 to-white', icon: '🕌' },
-]
-
-export const STATS = [
-  { value: 96, suffix: '%', label: 'of students read Quran fluently within 6 months' },
-  { value: 850, suffix: '+', label: 'families trust Bright Academy every week' },
-  { value: 1200, suffix: '+', label: 'live lessons delivered weekly' },
-  { value: 4.9, suffix: '★', label: 'average teacher rating from parents', decimals: 1 },
-]
-
-export const HOW_IT_WORKS = [
-  { n: '01', title: 'Tell us about your child', desc: 'Age, current level and goals — our quick quiz matches the right Quran, Arabic or Islamic Studies track in minutes.' },
-  { n: '02', title: 'Meet the teacher, free', desc: 'Book a no-cost trial lesson, see the live classroom and get a short assessment report from the teacher.' },
-  { n: '03', title: 'Learn live, every week', desc: 'Small structured classes with homework, recitation feedback and progress you can see in your parent dashboard.' },
-]
-
-export const HOW_IT_WORKS_LONG = [
-  { n: 1, title: 'Choose a Course', desc: 'Browse our structured programs by subject, age group or goal. Each course has clear outcomes, a week-by-week curriculum and transparent pricing.' },
-  { n: 2, title: 'Take a Free Trial & Assessment', desc: 'A short live session determines your child’s current level (Qaida, Nazirah, Hifz, Arabic level) so they begin exactly where they need to.' },
-  { n: 3, title: 'Start Learning', desc: 'Your child is matched with an expert teacher who follows a structured lesson plan. Every session builds on the last: revision, new skill, practice and feedback.' },
-  { n: 4, title: 'Track Progress', desc: 'Receive weekly reports showing what your child learned, recitation accuracy, homework scores and attendance — all in one dashboard.' },
-]
-
-export const TESTIMONIALS = [
-  { name: 'Nadia A.', role: 'Parent · Noorani Qaida', text: 'My daughter went from not knowing the letters to reading Surah Al-Fatihah in 10 weeks. The live teacher makes all the difference.' },
-  { name: 'Bilal K.', role: 'Parent · Hifz Program', text: 'The revision system actually works. He has finished Juz Amma and still remembers every surah. The tracker keeps us honest at home.' },
-  { name: 'Fatima R.', role: 'Parent · Arabic for Kids', text: 'Small classes mean the teacher actually knows my son. He speaks Arabic with his grandmother now — she is overjoyed.' },
-  { name: 'Daud S.', role: 'Parent · Tajweed', text: 'Structured, calm and serious about Tajweed. The monthly scorecard shows exactly which rules improved.' },
-  { name: 'Aisha M.', role: 'Parent · Islamic Studies', text: 'The classes are gentle and consistent. My kids look forward to them every week and the ‘Amal challenges changed our home.' },
-  { name: 'Sarah L.', role: 'Parent · Seerah', text: 'Reports every term, real homework, real feedback. It feels like a proper madrasah — online.' },
-]
-
-export const PRICING = [
-  { id: 'group', name: 'Group Classes', from: 15, mo: 60, desc: 'Small groups of 4–8 students. Perfect for motivated learners who thrive alongside peers.', features: ['Live sessions 2× per week', 'Groups of max 8 students', 'Monthly progress report', 'Recorded lesson replays', 'Workbook & flashcards included'], cta: 'Browse group courses', href: '/courses?type=group' },
-  { id: 'individual', name: '1-on-1 Tutoring', from: 20, mo: 80, desc: 'Fully personalised. The teacher adapts every lesson to your child’s pace, level and goals.', features: ['Sessions scheduled around you', '100% personalised curriculum', 'Monthly parent check-in call', 'Recitation review & feedback', 'Goal tracking dashboard', 'Free rescheduling (24h notice)'], cta: 'Browse 1-on-1 courses', href: '/courses?type=individual', popular: true },
-]
 
 export const FAQS = [
-  { q: 'What ages do you teach?', a: 'Bright Academy offers courses for children and teens aged 4 to 18. Each course specifies its age range — you can filter by age on our courses page to find the right fit. We also welcome adult beginners in Qaida and Tajweed courses.' },
-  { q: 'Are lessons live or pre-recorded?', a: 'All lessons are live, taught in real time by a qualified teacher in our virtual classroom. Sessions can be recorded so your child can rewatch any lesson they missed or want to review.' },
-  { q: 'Are your teachers qualified?', a: 'Yes. Every Quran teacher holds an Ijazah or a recognised Quranic Sciences degree, and all teachers pass a recitation/subject assessment, a teaching demo and a background check before joining.' },
-  { q: "What if my child doesn't connect with their teacher?", a: 'No problem at all. We offer a free teacher replacement — just let us know within the first two sessions and we will find a better match at no extra cost.' },
-  { q: 'How many students are in a group class?', a: 'Group classes are capped at 6–8 students maximum. This keeps interaction high and ensures every child recites and speaks in every lesson.' },
-  { q: 'Can I cancel or pause a subscription?', a: 'Yes. There are no long-term contracts. You can pause or cancel anytime from your parent dashboard. Unused sessions are carried forward, never lost.' },
-  { q: 'What technology do we need?', a: 'Just a laptop, tablet or desktop with a stable internet connection. Our virtual classroom runs in the browser — no downloads required. A headset is recommended for the best audio quality during recitation.' },
-  { q: 'Is there a free trial?', a: 'Yes — you can book a free trial lesson with the teacher. They will assess your child’s level, recommend the right course and plan, and you can attend the first session risk-free.' },
-  { q: "How do I track my child's progress?", a: 'Every parent gets a dashboard with monthly progress reports, attendance records, homework scores, recitation accuracy and teacher notes. We also send a detailed term report every 8 weeks.' },
+  { q: 'Who are the classes for?', a: 'Children, teens and adults. Every class is live online with a real teacher — one-on-one or in a small group.' },
+  { q: 'How do I start?', a: 'Send the free-trial form below. We will contact you, book a free first lesson and then set up your student account and weekly schedule.' },
+  { q: 'How do lessons work?', a: 'Log in, open “Today”, and press Join when your class starts. Video, chat and a shared whiteboard all run in the browser — nothing to install.' },
+  { q: 'Can I change my class time?', a: 'Yes. Message the academy and the admin will move the class — your schedule updates automatically.' },
+  { q: 'What do I need?', a: 'A laptop, tablet or phone with a camera, microphone and a stable internet connection.' },
 ]
-
-export const RESULTS = {
-  stats: [{ v: '93%', l: 'Student Attendance' }, { v: '89%', l: 'Student Retention' }, { v: '4.9/5', l: 'Parent Satisfaction' }, { v: '850+', l: 'Students Served' }, { v: '95%', l: 'Course Completion Rate' }],
-  transformations: [
-    { subject: 'Quran Reading', before: 'Can’t read', after: 'Fluent' }, { subject: 'Tajweed Rules', before: '0', after: '15' }, { subject: 'Surahs Memorised', before: '3', after: '37' }, { subject: 'Arabic Vocabulary', before: '0', after: '500+' },
-    { subject: 'Salah', before: 'With help', after: 'Independent' }, { subject: 'Daily Duas', before: '2', after: '20' }, { subject: 'Recitation Accuracy', before: '54%', after: '94%' }, { subject: 'Quranic Words Understood', before: '5%', after: '70%' },
-  ],
-  certificates: [
-    { title: 'Juz Amma Hifz Completion Certificate', org: 'Bright Academy Quran Department' }, { title: 'Noorani Qaida Completion', org: 'Bright Academy' }, { title: 'Tajweed Level 2 — Distinction', org: 'Bright Academy Quran Department' }, { title: 'Arabic Level 1 Certificate', org: 'Bright Academy Arabic Department' },
-  ],
-  stories: [{ quote: 'I never thought I could memorise a whole Juz. Now I lead Maghrib at home and my dad cries every time.', who: 'Yusuf N., 9', detail: 'Completed Juz Amma in 6 months' }, { quote: 'I finally understand what I say in salah. It feels completely different now.', who: 'Hafsa B., 14', detail: 'Quranic Arabic graduate' }],
-  works: [{ title: 'My Illustrated Seerah Timeline', score: 95, meta: 'Seerah · Ibrahim A., Age 9' }, { title: 'Six Pillars of Iman — Poster', score: 92, meta: 'Islamic Studies · Khadija M., Age 8' }, { title: 'Arabic Story: Yawm fi al-Madrasah', score: 90, meta: 'Arabic · Maryam N., Age 10' }],
-  parents: [{ name: 'Farida', detail: 'Parent of Amina, 7', quote: 'I am very grateful I found Bright Academy. Amina reads Qaida lesson 17 already and asks for her class every day.' }, { name: 'Ahmed M.', detail: 'Dad of Hamza', quote: 'Hamza’s Tajweed improved so much that the imam at our masjid asked where he learned. Alhamdulillah.' }, { name: 'Sumaya', detail: 'Mom of Musa & Safiya', quote: 'Two kids, two teachers, one dashboard. Scheduling around school has been effortless.' }],
-}
-
-export const HELP_ARTICLES = [
-  { q: 'How do I join a live class?', a: 'Go to Sessions (or your Dashboard) and click “Enter Classroom” up to 10 minutes before the start time. Allow camera and microphone access when your browser asks.' },
-  { q: 'How do I reschedule a lesson?', a: 'Parents and students can request a new time from the Schedule page (24 hours notice). The teacher approves or proposes another time. Requests inside 24h are auto-approved once per month.' },
-  { q: 'Where are lesson recordings?', a: 'Recordings appear under Recordings within a few minutes of the class ending (when recording was enabled by the teacher). Students and parents can watch them any time.' },
-  { q: 'How do payments work?', a: 'Plans renew monthly. You can pause or cancel anytime from Payments. Unused sessions roll over to the next month.' },
-  { q: 'How do I contact my teacher?', a: 'Use Messages in your portal. Teachers usually reply within one working day. Messages are monitored for child safety.' },
-]
-
-export const DEMO_STUDENT_NAMES = ['Alisher Karimov', 'Zaynab Hussain', 'Ibrahim Ali', 'Khadija Mahmood', 'Ahmad Rizwan', 'Hafsa Begum', 'Bilal Osman', 'Sumayyah Adams', 'Imran Siddiqui', 'Amina Yusupova', 'Hamza Khan', 'Ruqayyah Bello', 'Musa Abdullah', 'Safiya Rahman', 'Idris Malik', 'Zahra Qureshi', 'Tariq Aziz', 'Layla Haddad', 'Umar Farouk', 'Aminah Sulaiman', 'Dawud Osei']

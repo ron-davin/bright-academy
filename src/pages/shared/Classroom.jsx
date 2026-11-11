@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom'
 import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, Circle, Square, MessageSquare, PenTool, Users, NotebookPen, Send, Eraser, Trash2, ExternalLink, Copy, Clock, ShieldCheck, LogIn } from 'lucide-react'
-import { useStore, useCurrentUser, useUI, toast } from '../../lib/store.js'
+import { useStore, useMe, toast } from '../../lib/store.js'
+import { subjectById } from '../../lib/data.js'
+import { homeFor } from '../../components/app/AppShell.jsx'
 import { supabase, cloudActive } from '../../lib/cloud.js'
 import { Avatar, Badge, Button, Dialog, Input, asset } from '../../components/ui/index.jsx'
-import { courseOf } from '../../components/app/Shared.jsx'
 import { cn, fmtTime, initials, uid } from '../../lib/utils.js'
 
 const roomName = (sessionId) => `room-${String(sessionId).replace(/[^a-zA-Z0-9-]/g, '')}`
@@ -94,13 +95,13 @@ export default function Classroom() {
   const { sessionId } = useParams()
   const [params] = useSearchParams()
   const nav = useNavigate()
-  const user = useCurrentUser()
-  const openAuth = useUI((s) => s.openAuth)
+  const user = useMe()
   const sess = useStore((s) => s.sessions.find((x) => x.id === sessionId))
   const users = useStore((s) => s.users)
-  const cloudReady = useStore((s) => s.cloudReady)
-  const { startSession, endSession, markAttendance } = useStore()
-  const isTeacher = user?.role === 'teacher' && user?.teacherId === sess?.teacherId
+  const cloudReady = useStore((s) => s.ready)
+  const { startSession, endSession, updateSession } = useStore()
+  const markAttendance = (id, studentId, present) => updateSession(id, { attendance: { ...(sess?.attendance || {}), [studentId]: present } })
+  const isTeacher = !!user && user.id === sess?.teacherId
   const cloud = cloudActive() && !!supabase
 
   const [joined, setJoined] = useState(false)
@@ -126,7 +127,7 @@ export default function Classroom() {
   const wbSubs = useRef(new Set())
   const startedAtRef = useRef(Date.now())
   const timer = useTimer(startedAtRef.current)
-  const course = sess && courseOf(sess.courseId)
+  const course = sess && { title: subjectById(sess.subjectId).name, outcome: sess.topic ? `Today's topic: ${sess.topic}` : '' }
   const myName = user?.name || 'Guest'
 
   const wbBus = useMemo(() => ({ subscribe: (fn) => { wbSubs.current.add(fn); return () => wbSubs.current.delete(fn) }, emit: (m) => wbSubs.current.forEach((fn) => fn(m)) }), [])
@@ -235,12 +236,12 @@ export default function Classroom() {
       <img src={asset('logo-mark-t.png')} alt="" className="h-14 w-14 rounded-2xl bg-white/95 object-contain p-1.5" />
       <p className="text-lg font-semibold">Please sign in to join the classroom</p>
       <p className="max-w-sm text-center text-sm text-white/60">Use your Bright Academy account — teachers, students and parents can all join their own classes.</p>
-      <Button variant="sun" onClick={() => openAuth('signin', `/classroom/${sessionId}`)}><LogIn className="h-4 w-4" /> Sign in</Button>
+      <Button variant="sun" onClick={() => nav('/login', { state: { from: `/class/${sessionId}` } })}><LogIn className="h-4 w-4" /> Log in</Button>
       <Link to="/" className="text-sm text-white/60 hover:text-white">← Back to home</Link>
     </div>
   )
   if (!sess && cloud && !cloudReady) return <div className="flex min-h-svh items-center justify-center bg-brand-950 text-white"><p>Loading session…</p></div>
-  if (!sess) return <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-brand-950 text-white"><p>Session not found (or not yours to join).</p><Button variant="light" onClick={() => nav(-1)}>Go back</Button></div>
+  if (!sess) return <div className="flex min-h-svh flex-col items-center justify-center gap-4 bg-brand-950 text-white"><p>Session not found (or not yours to join).</p><Button variant="light" onClick={() => nav(user ? homeFor(user.role) : '/')}>Go back</Button></div>
 
   const toggleMic = () => { const t = streamRef.current?.getAudioTracks?.()[0]; if (t) { t.enabled = !t.enabled; setMic(t.enabled) } }
   const toggleCam = () => { const t = streamRef.current?.getVideoTracks?.()[0]; if (t) { t.enabled = !t.enabled; setCam(t.enabled) } }
@@ -266,11 +267,12 @@ export default function Classroom() {
     } catch { /* cancelled */ }
   }
   const sendChat = (e) => { e.preventDefault(); if (!msg.trim()) return; const m = { from: myName, text: msg.trim(), at: new Date().toISOString() }; setChat((c) => [...c, m]); channelRef.current?.send({ type: 'broadcast', event: 'chat', payload: m }); setMsg('') }
-  const leave = () => { if (isTeacher) setEndOpen(true); else nav(-1) }
+  const back = () => nav(user ? homeFor(user.role) : '/')
+  const leave = () => { if (isTeacher) setEndOpen(true); else back() }
   const confirmEnd = (finish) => {
     setEndOpen(false)
-    if (finish) { endSession(sessionId, { recorded: recording || undefined, durationMin: Math.round((Date.now() - startedAtRef.current) / 60000) || 45 }); toast({ title: 'Session marked complete', desc: 'Now fill in the lesson feedback.', type: 'success' }); nav('/teacher/feedback') }
-    else nav(-1)
+    if (finish) { endSession(sessionId); toast({ title: 'Class marked complete', desc: 'Add the topic, homework and attendance.', type: 'success' }); nav('/teacher') }
+    else back()
   }
   const jitsiUrl = `https://meet.jit.si/BrightAcademy-${roomName(sessionId)}`
   const students = sess.studentIds.map((id) => users.find((u) => u.id === id)).filter(Boolean)
@@ -285,9 +287,9 @@ export default function Classroom() {
         {mediaError && <p className="mt-3 rounded-lg bg-coral-500/20 p-2.5 text-xs text-coral-200">{mediaError}</p>}
         <Button variant="sun" className="mt-4 w-full" onClick={join} loading={connState === 'connecting'}>{isTeacher ? 'Start class & join' : 'Join the session'}</Button>
         <a href={jitsiUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-full border border-white/20 px-4 py-2.5 text-sm text-white/80 hover:bg-white/10"><ExternalLink className="h-4 w-4" /> Open in Jitsi Meet instead (free fallback)</a>
-        <p className="mt-4 text-[11px] leading-relaxed text-white/50">Built-in room: direct WebRTC video over free public STUN, signalled through the academy cloud — no cost. Very strict school/office networks may need a TURN relay or the Jitsi fallback — see <Link to="/costs" className="underline">Services & Costs</Link>.</p>
+        <p className="mt-4 text-[11px] leading-relaxed text-white/50">Built-in room: direct WebRTC video over free public STUN, signalled through the academy cloud — no cost. If video can’t connect on a strict school/office network, use the Jitsi button above.</p>
       </div>
-      <button type="button" onClick={() => nav(-1)} className="text-sm text-white/60 hover:text-white">← Back</button>
+      <button type="button" onClick={back} className="text-sm text-white/60 hover:text-white">← Back</button>
     </div>
   )
 
@@ -354,14 +356,14 @@ export default function Classroom() {
               <p className="text-[11px] font-bold uppercase tracking-wider text-ink/50">Lesson topic</p>
               <p className="mt-1 font-semibold">{sess.topic || 'No topic set — add one from Sessions.'}</p>
               <p className="mt-4 text-[11px] font-bold uppercase tracking-wider text-ink/50">Course outcome</p>
-              <p className="mt-1 text-ink/70">{course?.outcome}</p>
+              <p className="mt-1 text-ink/70">{sess.homework || 'None yet.'}</p>
               <p className="mt-4 flex items-start gap-2 rounded-lg bg-ink/4 p-2.5 text-xs text-ink/60"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> Sessions may be recorded for child safety and quality review.</p>
             </div>
           )}
         </aside>
       </div>
-      <Dialog open={endOpen} onClose={() => setEndOpen(false)} title="Did you finish the lesson?" desc="Marking it complete records attendance and asks for your post-lesson feedback." size="sm"
-        footer={<><Button app variant="outline" onClick={() => confirmEnd(false)}>No, just leave</Button><Button app onClick={() => confirmEnd(true)}>Yes, complete & fill report</Button></>} />
+      <Dialog open={endOpen} onClose={() => setEndOpen(false)} title="Did you finish the lesson?" desc="Marking it complete lets you add the topic, homework and attendance." size="sm"
+        footer={<><Button app variant="outline" onClick={() => confirmEnd(false)}>No, just leave</Button><Button app onClick={() => confirmEnd(true)}>Yes, mark complete</Button></>} />
     </div>
   )
 }
