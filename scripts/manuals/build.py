@@ -155,6 +155,7 @@ def admin_story():
           H2('Your menu'),
           kv([('Schedule', 'The weekly calendar for the whole academy. Create and change classes here.'),
               ('Classes', 'A list of every recurring class. Edit, pause, resume or delete.'),
+              ('Subjects', 'What the academy teaches. Add new subjects, edit or hide existing ones.'),
               ('People', 'Students, teachers and admins. Create accounts, reset passwords, set availability.'),
               ('Requests', 'Free-trial requests sent from the website. The number shows new requests.'),
               ('Settings', 'Your own name, phone and password.')]),
@@ -168,7 +169,7 @@ def admin_story():
                  'Type the full name and email. A password is already filled in — click <b>New</b> for a different one, or type your own (8+ characters).',
                  'Teachers: tap the <b>subjects they teach</b>. Students: add age, grade and notes (for example a parent’s phone number).',
                  'Click <b>Create</b>. The next screen shows the login details — click <b>Copy</b> and send them to the person (WhatsApp, email, SMS).']),
-          dlg('admin-add-person', caption='Adding a teacher. The subjects you choose decide which classes they can be given.'),
+          dlg('admin-add-person', caption='Adding a teacher. The subjects you choose decide which classes they can be given. New subjects are added on the Subjects page.'),
           tip('The password is only shown once. If it is lost, use <b>Password</b> on the person’s row to set a new one.'),
           img('admin-people-teachers', caption='People › Teachers. Each row has Edit, Availability, Password and Deactivate.'),
           H2('Teacher availability'),
@@ -225,7 +226,26 @@ def admin_story():
           tip('To add a new student to an existing group, open <b>Edit</b> and tick their name. They join from the next session onwards.'),
           PageBreak(),
 
-          H1('7. Free-trial requests'),
+          H1('7. Subjects'),
+          P('<b>Subjects</b> lists everything the academy teaches. Each card shows how many teachers teach the subject and how many active classes it has. Subjects appear on the homepage, in the free-trial form and in the <b>New class</b> form.'),
+          img('admin-subjects', caption='The Subjects page.'),
+          H2('Add a subject'),
+          steps(['Open <b>Subjects</b> and click <b>Add subject</b> (top right).',
+                 'Type the <b>name</b>, for example Piano or Chess.',
+                 'Write a <b>short description</b> — one sentence that visitors see on the homepage.',
+                 'Pick a <b>colour</b> and an <b>icon</b>. The preview at the bottom shows how it will look on the schedule.',
+                 'Click <b>Add subject</b>. It appears straight away on the homepage and in the class forms.',
+                 'Open <b>People › Teachers</b>, click <b>Edit</b> on each teacher who teaches it and tick the new subject.']),
+          dlg('admin-add-subject', caption='Adding a new subject. The colour is used for its blocks on the schedule.', width=11 * cm, max_h=15 * cm),
+          H2('Edit, hide or delete'),
+          kv([('Edit', 'Change the name, description, colour or icon. Existing classes and sessions update automatically.'),
+              ('Hide', 'Stops offering the subject: it disappears from the homepage, the free-trial form and the New class form. Classes already running carry on. Click <b>Show</b> to bring it back.'),
+              ('Delete', 'Only for subjects you added that have never had a class. Built-in subjects can be hidden but not deleted.')]),
+          Spacer(1, 6),
+          tip('A new subject has no teachers yet. Until you tick it on at least one teacher, the New class form will show all teachers and a reminder.'),
+          PageBreak(),
+
+          H1('8. Free-trial requests'),
           P('Visitors fill in the <b>Book a free trial</b> form on the website. Each request appears in <b>Requests</b>, and the menu shows how many are new.'),
           img('public-trial', caption='The free-trial form on the public website.'),
           steps(['Open <b>Requests</b>. Contact the family by clicking their email, or call the phone number.',
@@ -235,7 +255,7 @@ def admin_story():
           img('admin-requests', caption='Requests from the website.'),
           PageBreak(),
 
-          H1('8. Passwords and access'),
+          H1('9. Passwords and access'),
           kv([('Forgotten password', 'People › find the person › <b>Password</b> › <b>Set password</b>, then share the new details.'),
               ('Someone leaves', 'Click <b>Deactivate</b>. They can no longer log in; their history is kept. <b>Activate</b> brings them back.'),
               ('Change a name or email', 'People › <b>Edit</b>. A changed email becomes their new login.'),
@@ -243,9 +263,10 @@ def admin_story():
           Spacer(1, 8),
           dlg('admin-reset-password', width=9 * cm, caption='Setting a new password for a teacher.'),
           tip('The demo accounts (password <b>demo1234</b>) are for trying the app. Before real students join, deactivate them or give them new passwords.', 'important'),
-          H1('9. Help and troubleshooting'),
+          H1('10. Help and troubleshooting'),
           kv([('“Can’t reach the academy server”', 'The database was asleep or the internet dropped. Wait a minute and try again.'),
               ('A teacher is missing from the class form', 'Add the subject to the teacher in People › Edit.'),
+              ('A subject is missing', 'It may be hidden. Open <b>Subjects</b> and click <b>Show</b>.'),
               ('Video will not connect', 'Ask everyone to refresh the page, allow camera and microphone, or use the <b>Open in Jitsi</b> button in the classroom.'),
               ('Someone cannot log in', 'Check they use the exact email from People, then reset their password.'),
               ('Need to see a lesson', 'Click the session › <b>Open classroom</b> to join as an observer.')]),
@@ -373,6 +394,8 @@ def student_story():
           ]
     return s
 
-build('Bright-Academy-Admin-Manual.pdf', 'Admin', admin_story)
-build('Bright-Academy-Teacher-Manual.pdf', 'Teacher', teacher_story)
-build('Bright-Academy-Student-Manual.pdf', 'Student', student_story)
+import sys
+ONLY = sys.argv[1].lower() if len(sys.argv) > 1 else None  # e.g. `python3 build.py admin`
+for role, fn in [('Admin', admin_story), ('Teacher', teacher_story), ('Student', student_story)]:
+    if not ONLY or ONLY == role.lower():
+        build(f'Bright-Academy-{role}-Manual.pdf', role, fn)
