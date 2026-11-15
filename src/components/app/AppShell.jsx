@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, NavLink, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { CalendarDays, LayoutGrid, Users, Inbox, Settings, Sun, Clock, BookMarked, LogOut, GraduationCap } from 'lucide-react'
+import { CalendarDays, LayoutGrid, Users, Inbox, Settings, Sun, Clock, BookMarked, LogOut, GraduationCap, Shapes } from 'lucide-react'
 import { useStore, useMe } from '../../lib/store.js'
 import { Avatar, asset } from '../ui/index.jsx'
 import { cn } from '../../lib/utils.js'
@@ -9,6 +9,7 @@ export const NAV = {
   admin: [
     { t: 'Schedule', to: '/admin/schedule', icon: CalendarDays },
     { t: 'Classes', to: '/admin/classes', icon: LayoutGrid },
+    { t: 'Subjects', to: '/admin/subjects', icon: Shapes },
     { t: 'People', to: '/admin/people', icon: Users },
     { t: 'Requests', to: '/admin/requests', icon: Inbox, badge: 'requests' },
     { t: 'Settings', to: '/settings', icon: Settings },

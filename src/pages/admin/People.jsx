@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { UserPlus, Search, Pencil, KeyRound, UserX, UserCheck, Clock, Copy, Users } from 'lucide-react'
 import { useStore, toast } from '../../lib/store.js'
-import { SUBJECTS, subjectById } from '../../lib/data.js'
-import { usePeople, AvailabilityEditor } from '../../components/app/common.jsx'
+import { subjectById } from '../../lib/data.js'
+import { usePeople, useSubjects, AvailabilityEditor } from '../../components/app/common.jsx'
 import { PageTitle } from '../../components/app/AppShell.jsx'
 import { Avatar, Badge, Button, Dialog, EmptyState, Input, Textarea } from '../../components/ui/index.jsx'
 import { cn } from '../../lib/utils.js'
@@ -20,6 +20,7 @@ function Credentials({ creds, onClose }) {
 }
 
 export function PersonForm({ role, person, prefill, onClose, onCreated }) {
+  const allSubjects = useSubjects({ all: true })
   const adminUsers = useStore((s) => s.adminUsers)
   const editing = !!person
   const [f, setF] = useState({ name: person?.name || prefill?.name || '', email: person?.email || prefill?.email || '', password: editing ? '' : genPassword(), phone: person?.phone || prefill?.phone || '', subjects: person?.subjects || [], age: person?.age || prefill?.age || '', grade: person?.grade || '', notes: person?.notes || prefill?.notes || '' })
@@ -40,7 +41,7 @@ export function PersonForm({ role, person, prefill, onClose, onCreated }) {
         <Input app label="Full name" required value={f.name} onChange={set('name')} />
         <div className="grid gap-4 sm:grid-cols-2"><Input app label="Email (used to log in)" type="email" required value={f.email} onChange={set('email')} /><Input app label="Phone (optional)" value={f.phone} onChange={set('phone')} /></div>
         {!editing && <div><span className="label">Password</span><div className="flex gap-2"><Input app value={f.password} onChange={set('password')} required minLength={8} /><Button app variant="outline" onClick={() => setF((x) => ({ ...x, password: genPassword() }))}>New</Button></div></div>}
-        {role === 'teacher' && <div><span className="label">Subjects they teach</span><div className="flex flex-wrap gap-2">{SUBJECTS.map((s) => <button key={s.id} type="button" onClick={() => setF((x) => ({ ...x, subjects: x.subjects.includes(s.id) ? x.subjects.filter((y) => y !== s.id) : [...x.subjects, s.id] }))} className={cn('rounded-xl border px-3 py-1.5 text-sm', f.subjects.includes(s.id) ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-gray-200 hover:bg-gray-50')}>{s.name}</button>)}</div></div>}
+        {role === 'teacher' && <div><span className="label">Subjects they teach</span><div className="flex flex-wrap gap-2">{allSubjects.filter((s) => !s.hidden || f.subjects.includes(s.id)).map((s) => <button key={s.id} type="button" onClick={() => setF((x) => ({ ...x, subjects: x.subjects.includes(s.id) ? x.subjects.filter((y) => y !== s.id) : [...x.subjects, s.id] }))} className={cn('rounded-xl border px-3 py-1.5 text-sm', f.subjects.includes(s.id) ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-gray-200 hover:bg-gray-50')}>{s.name}</button>)}</div></div>}
         {role === 'student' && <><div className="grid gap-4 sm:grid-cols-2"><Input app label="Age" type="number" value={f.age} onChange={set('age')} /><Input app label="Grade / level" value={f.grade} onChange={set('grade')} /></div><Textarea app label="Notes (parent contact, goals…)" rows={2} value={f.notes} onChange={set('notes')} /></>}
         {err && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{err}</p>}
         <div className="flex justify-end gap-2 border-t border-gray-100 pt-4"><Button app variant="outline" onClick={onClose}>Cancel</Button><Button app type="submit" loading={busy}>{editing ? 'Save' : `Create ${role}`}</Button></div>

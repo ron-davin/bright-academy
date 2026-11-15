@@ -2,9 +2,9 @@ import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, CalendarPlus, AlertTriangle, Pencil, Ban, RotateCcw, Trash2, Video } from 'lucide-react'
 import { useStore, toast } from '../../lib/store.js'
-import { SUBJECTS, subjectById } from '../../lib/data.js'
+import { subjectById } from '../../lib/data.js'
 import { startOfWeek, weekDays, findConflicts, fromYmd, at, ymd } from '../../lib/schedule.js'
-import { usePeople, WeekCalendar, SubjectChip, StatusBadge, names } from '../../components/app/common.jsx'
+import { usePeople, useSubjects, WeekCalendar, SubjectChip, StatusBadge, names } from '../../components/app/common.jsx'
 import { PageTitle } from '../../components/app/AppShell.jsx'
 import { Button, Dialog, Input, Select } from '../../components/ui/index.jsx'
 import ClassForm from './ClassForm.jsx'
@@ -86,7 +86,8 @@ function OneOffForm({ onClose, prefill }) {
   const { teachers, students, byId } = usePeople()
   const sessions = useStore((s) => s.sessions)
   const addOneOff = useStore((s) => s.addOneOff)
-  const [f, setF] = useState({ subjectId: SUBJECTS[0].id, teacherId: '', studentIds: [], date: prefill?.date || ymd(new Date()), time: prefill?.time || '17:00', minutes: 45 })
+  const subjects = useSubjects()
+  const [f, setF] = useState({ subjectId: subjects[0]?.id, teacherId: '', studentIds: [], date: prefill?.date || ymd(new Date()), time: prefill?.time || '17:00', minutes: 45 })
   const set = (p) => setF((x) => ({ ...x, ...p }))
   const start = at(fromYmd(f.date), f.time); const end = new Date(+start + f.minutes * 6e4)
   const conflicts = f.teacherId ? findConflicts([{ start: start.toISOString(), end: end.toISOString() }], sessions, { teacherId: f.teacherId, studentIds: f.studentIds }) : []
@@ -94,7 +95,7 @@ function OneOffForm({ onClose, prefill }) {
   return (
     <Dialog open onClose={onClose} title="Extra class" desc="A single session — e.g. a make-up or trial lesson." size="md">
       <div className="space-y-4">
-        <Select app label="Subject" value={f.subjectId} onChange={(e) => set({ subjectId: e.target.value })}>{SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
+        <Select app label="Subject" value={f.subjectId} onChange={(e) => set({ subjectId: e.target.value })}>{subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
         <Select app label="Teacher" value={f.teacherId} onChange={(e) => set({ teacherId: e.target.value })}><option value="">Choose…</option>{teachers.filter((t) => t.active !== false).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
         <div><span className="label">Students</span><div className="max-h-36 overflow-y-auto rounded-xl border border-gray-200 thin-scroll">{students.filter((s) => s.active !== false).map((s) => (
           <label key={s.id} className="flex cursor-pointer items-center gap-3 border-b border-gray-100 px-3 py-2 text-sm last:border-0 hover:bg-gray-50"><input type="checkbox" checked={f.studentIds.includes(s.id)} onChange={() => set({ studentIds: f.studentIds.includes(s.id) ? f.studentIds.filter((x) => x !== s.id) : [...f.studentIds, s.id] })} className="h-4 w-4 accent-brand-600" />{s.name}</label>))}</div></div>
@@ -112,6 +113,8 @@ function OneOffForm({ onClose, prefill }) {
 }
 
 export default function AdminSchedule() {
+  const subjects = useSubjects()
+  const allSubjects = useSubjects({ all: true })
   const { byId, teachers, students } = usePeople()
   const sessions = useStore((s) => s.sessions)
   const availability = useStore((s) => s.availability)
@@ -131,14 +134,14 @@ export default function AdminSchedule() {
       <div className="mb-4 flex flex-wrap gap-2">
         <Select app value={filter.teacherId} onChange={(e) => setFilter((x) => ({ ...x, teacherId: e.target.value }))} className="w-48"><option value="">All teachers</option>{teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
         <Select app value={filter.studentId} onChange={(e) => setFilter((x) => ({ ...x, studentId: e.target.value }))} className="w-48"><option value="">All students</option>{students.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
-        <Select app value={filter.subjectId} onChange={(e) => setFilter((x) => ({ ...x, subjectId: e.target.value }))} className="w-48"><option value="">All subjects</option>{SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
+        <Select app value={filter.subjectId} onChange={(e) => setFilter((x) => ({ ...x, subjectId: e.target.value }))} className="w-48"><option value="">All subjects</option>{allSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
         {(filter.teacherId || filter.studentId || filter.subjectId) && <Button app variant="ghost" onClick={() => setFilter({ teacherId: '', studentId: '', subjectId: '' })}>Clear filters</Button>}
       </div>
       <WeekCalendar week={week} onWeek={setWeek} sessions={visible} label={label} onSessionClick={setPanel}
         availability={filter.teacherId ? availability[filter.teacherId] || [] : []}
         onSlotClick={(d, time) => setClassForm({ prefill: { slots: [{ day: d.getDay(), time, minutes: 45 }], startDate: ymd(d) } })} />
       {filter.teacherId && <p className="mt-2 text-xs text-gray-500"><span className="mr-1 inline-block h-3 w-3 rounded bg-brand-50 align-middle ring-1 ring-brand-100" /> Shaded = {byId[filter.teacherId]?.name}'s available hours</p>}
-      <div className={cn('mt-3 flex flex-wrap gap-3 text-xs text-gray-500')}>{SUBJECTS.map((s) => <span key={s.id} className="flex items-center gap-1.5"><span className={cn('h-2.5 w-2.5 rounded-full', s.dot)} />{s.name}</span>)}</div>
+      <div className={cn('mt-3 flex flex-wrap gap-3 text-xs text-gray-500')}>{subjects.map((s) => <span key={s.id} className="flex items-center gap-1.5"><span className={cn('h-2.5 w-2.5 rounded-full', s.dot)} />{s.name}</span>)}</div>
       {panel && <SessionPanel key={panel.id} sess={sessions.find((s) => s.id === panel.id) || panel} onClose={() => setPanel(null)} onEditClass={(cls) => { setPanel(null); setClassForm({ editing: cls }) }} />}
       {classForm && <ClassForm open editing={classForm.editing} prefill={classForm.prefill} onClose={() => setClassForm(null)} />}
       {oneOff && <OneOffForm prefill={oneOff} onClose={() => setOneOff(null)} />}

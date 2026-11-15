@@ -8,6 +8,7 @@ import AdminSchedule from './pages/admin/Schedule.jsx'
 import AdminClasses from './pages/admin/Classes.jsx'
 import People from './pages/admin/People.jsx'
 import Requests from './pages/admin/Requests.jsx'
+import Subjects from './pages/admin/Subjects.jsx'
 import { TeacherToday, TeacherSchedule, TeacherStudents, TeacherAvailability } from './pages/teacher/index.jsx'
 import { StudentToday, StudentSchedule, StudentClasses } from './pages/student/index.jsx'
 import Settings from './pages/shared/Settings.jsx'
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/admin/classes" element={<AdminClasses />} />
           <Route path="/admin/people" element={<People />} />
           <Route path="/admin/requests" element={<Requests />} />
+          <Route path="/admin/subjects" element={<Subjects />} />
         </Route>
         <Route element={<AppShell role="teacher" />}>
           <Route path="/teacher" element={<TeacherToday />} />

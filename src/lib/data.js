@@ -5,17 +5,50 @@ export const BRAND = {
   phone: '+1 (555) 010-2030',
 }
 
-// color = Tailwind classes for chips / calendar blocks
-export const SUBJECTS = [
-  { id: 'math', name: 'Math', icon: 'Calculator', color: 'bg-sky-100 text-sky-800 border-sky-200', dot: 'bg-sky-500', desc: 'From counting and fractions to algebra and geometry — confidence first.' },
-  { id: 'science', name: 'Science', icon: 'FlaskConical', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500', desc: 'Biology, chemistry and physics explained with real-life examples.' },
-  { id: 'esl', name: 'English (ESL)', icon: 'Languages', color: 'bg-violet-100 text-violet-800 border-violet-200', dot: 'bg-violet-500', desc: 'Speaking, reading and writing English with patient native-level tutors.' },
-  { id: 'programming', name: 'Computer Programming', icon: 'Code2', color: 'bg-slate-200 text-slate-800 border-slate-300', dot: 'bg-slate-600', desc: 'Scratch for beginners, then Python and web — building real projects.' },
-  { id: 'quran', name: "Qur'an", icon: 'BookOpen', color: 'bg-teal-100 text-teal-800 border-teal-200', dot: 'bg-teal-600', desc: 'Reading, Tajweed and memorisation with qualified teachers.' },
-  { id: 'arabic', name: 'Arabic', icon: 'Type', color: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500', desc: 'Conversational and classical Arabic for kids and teens.' },
-  { id: 'islamic', name: 'Islamic Studies', icon: 'Landmark', color: 'bg-rose-100 text-rose-800 border-rose-200', dot: 'bg-rose-500', desc: 'Beliefs, worship, history and good character.' },
+// Subject colours — full literal class strings so Tailwind keeps them in the build
+export const SUBJECT_COLORS = {
+  sky: { color: 'bg-sky-100 text-sky-800 border-sky-200', dot: 'bg-sky-500' },
+  emerald: { color: 'bg-emerald-100 text-emerald-800 border-emerald-200', dot: 'bg-emerald-500' },
+  violet: { color: 'bg-violet-100 text-violet-800 border-violet-200', dot: 'bg-violet-500' },
+  slate: { color: 'bg-slate-200 text-slate-800 border-slate-300', dot: 'bg-slate-600' },
+  teal: { color: 'bg-teal-100 text-teal-800 border-teal-200', dot: 'bg-teal-600' },
+  amber: { color: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-500' },
+  rose: { color: 'bg-rose-100 text-rose-800 border-rose-200', dot: 'bg-rose-500' },
+  orange: { color: 'bg-orange-100 text-orange-800 border-orange-200', dot: 'bg-orange-500' },
+  lime: { color: 'bg-lime-100 text-lime-800 border-lime-200', dot: 'bg-lime-600' },
+  indigo: { color: 'bg-indigo-100 text-indigo-800 border-indigo-200', dot: 'bg-indigo-500' },
+  pink: { color: 'bg-pink-100 text-pink-800 border-pink-200', dot: 'bg-pink-500' },
+  cyan: { color: 'bg-cyan-100 text-cyan-800 border-cyan-200', dot: 'bg-cyan-600' },
+  stone: { color: 'bg-stone-200 text-stone-800 border-stone-300', dot: 'bg-stone-600' },
+}
+// Icon names (lucide) the admin can choose from — mapped to components in components/app/common.jsx
+export const SUBJECT_ICONS = ['BookOpen', 'Calculator', 'FlaskConical', 'Atom', 'Languages', 'Code2', 'Type', 'Landmark', 'ChessKnight', 'Music', 'Palette', 'Globe', 'PenTool', 'Brain', 'Microscope', 'Sigma', 'Leaf', 'History', 'Lightbulb', 'Rocket', 'Trophy', 'Mic', 'Camera', 'GraduationCap']
+
+// Built-in subjects. The admin can edit or hide these and add new ones (stored in the `subjects` collection).
+export const DEFAULT_SUBJECTS = [
+  { id: 'math', name: 'Math', icon: 'Calculator', colorKey: 'sky', desc: 'From counting and fractions to algebra and geometry — confidence first.' },
+  { id: 'science', name: 'Science', icon: 'FlaskConical', colorKey: 'emerald', desc: 'Biology, chemistry and physics explained with real-life examples.' },
+  { id: 'esl', name: 'English (ESL)', icon: 'Languages', colorKey: 'violet', desc: 'Speaking, reading and writing English with patient native-level tutors.' },
+  { id: 'programming', name: 'Computer Programming', icon: 'Code2', colorKey: 'slate', desc: 'Scratch for beginners, then Python and web — building real projects.' },
+  { id: 'chess', name: 'Chess', icon: 'ChessKnight', colorKey: 'stone', desc: 'Rules, tactics and strategy — sharper thinking one move at a time.' },
+  { id: 'quran', name: "Qur'an", icon: 'BookOpen', colorKey: 'teal', desc: 'Reading, Tajweed and memorisation with qualified teachers.' },
+  { id: 'arabic', name: 'Arabic', icon: 'Type', colorKey: 'amber', desc: 'Conversational and classical Arabic for kids and teens.' },
+  { id: 'islamic', name: 'Islamic Studies', icon: 'Landmark', colorKey: 'rose', desc: 'Beliefs, worship, history and good character.' },
 ]
-export const subjectById = (id) => SUBJECTS.find((s) => s.id === id) || { id, name: id || 'Class', color: 'bg-gray-100 text-gray-800 border-gray-200', dot: 'bg-gray-400' }
+
+const withColor = (s) => ({ ...s, ...(SUBJECT_COLORS[s.colorKey] || SUBJECT_COLORS.slate) })
+// Defaults overridden by admin records (same id), then admin-added subjects. Includes hidden ones.
+export function mergeSubjects(records = []) {
+  const byId = new Map(records.map((r) => [r.id, r]))
+  const merged = DEFAULT_SUBJECTS.map((d) => ({ ...d, builtIn: true, ...byId.get(d.id) }))
+  const extra = records.filter((r) => !DEFAULT_SUBJECTS.some((d) => d.id === r.id)).sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')))
+  return [...merged, ...extra].map(withColor)
+}
+
+// Module-level registry so plain lookups (subjectById) see admin changes; kept in sync by the store.
+let REGISTRY = mergeSubjects()
+export const setSubjectRecords = (records) => { REGISTRY = mergeSubjects(records) }
+export const subjectById = (id) => REGISTRY.find((s) => s.id === id) || { id, name: id || 'Class', icon: 'BookOpen', ...SUBJECT_COLORS.slate, color: 'bg-gray-100 text-gray-800 border-gray-200', dot: 'bg-gray-400' }
 
 // Homepage teacher strip (static marketing content)
 export const TEACHERS = [

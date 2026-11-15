@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase, loadCloudState, diffAndPush, resetShadow, subscribeRealtime, buildStateFromRows } from './cloud.js'
 import { topUpSessions, regenerateFuture } from './schedule.js'
 import { uid } from './utils.js'
+import { setSubjectRecords } from './data.js'
 
 // ---------- UI store (toasts) ----------
 export const useUI = create((set) => ({
@@ -90,6 +91,14 @@ export const useStore = create((set, get) => ({
   // ---------- availability ----------
   setAvailability: (teacherId, windows) => set((s) => ({ availability: { ...s.availability, [teacherId]: windows } })),
 
+  // ---------- subjects (admin) ----------
+  saveSubject: (subj) => set((s) => {
+    const rest = { ...subj }; delete rest.builtIn; delete rest.color; delete rest.dot
+    const exists = s.subjects.some((x) => x.id === subj.id)
+    return { subjects: exists ? s.subjects.map((x) => (x.id === subj.id ? { ...x, ...rest } : x)) : [...s.subjects, { createdAt: nowISO(), ...rest }] }
+  }),
+  removeSubject: (id) => set((s) => ({ subjects: s.subjects.filter((x) => x.id !== id) })),
+
   // ---------- leads (public trial form) ----------
   addLead: (lead) => set((s) => ({ leads: [{ id: uid('lead'), at: nowISO(), handled: false, ...lead }, ...s.leads] })),
   updateLead: (id, patch) => set((s) => ({ leads: s.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)) })),
@@ -118,5 +127,5 @@ if (typeof window !== 'undefined' && supabase) {
   supabase.auth.getSession().then(({ data }) => useStore.getState().refresh(data.session?.user?.id ?? null))
   supabase.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') useStore.setState({ currentUserId: null }) })
   subscribeRealtime(supabase, useStore.setState, null)
-  useStore.subscribe((state) => { if (state.ready) diffAndPush(state, supabase) })
+  useStore.subscribe((state, prev) => { if (state.subjects !== prev.subjects) setSubjectRecords(state.subjects); if (state.ready) diffAndPush(state, supabase) })
 }

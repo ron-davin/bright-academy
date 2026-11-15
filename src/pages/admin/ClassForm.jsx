@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react'
 import { AlertTriangle, Plus, Trash2, Search, CircleCheck } from 'lucide-react'
 import { useStore, toast } from '../../lib/store.js'
-import { SUBJECTS, subjectById } from '../../lib/data.js'
+import { subjectById } from '../../lib/data.js'
 import { expandClass, findConflicts, outsideAvailability, addDays, ymd } from '../../lib/schedule.js'
-import { usePeople, SubjectIcon, names } from '../../components/app/common.jsx'
+import { usePeople, useSubjects, SubjectIcon, names } from '../../components/app/common.jsx'
 import { Button, Dialog, Input, Select } from '../../components/ui/index.jsx'
 import { cn, DAYS, TIME_OPTIONS, timeLabel, fmtTime } from '../../lib/utils.js'
 
@@ -12,6 +12,7 @@ const fmtWhen = (iso) => `${new Date(iso).toLocaleDateString('en-US', { weekday:
 
 export default function ClassForm({ open, onClose, editing, prefill }) {
   const { teachers, students, byId } = usePeople()
+  const allSubjects = useSubjects({ all: true })
   const sessions = useStore((s) => s.sessions)
   const availability = useStore((s) => s.availability)
   const { createClass, updateClass } = useStore()
@@ -52,7 +53,7 @@ export default function ClassForm({ open, onClose, editing, prefill }) {
         <div>
           <p className="label">1. Subject</p>
           <div className="flex flex-wrap gap-2">
-            {SUBJECTS.map((s) => (
+            {allSubjects.filter((s) => !s.hidden || s.id === f.subjectId).map((s) => (
               <button key={s.id} type="button" onClick={() => set({ subjectId: s.id, teacherId: (byId[f.teacherId]?.subjects || []).includes(s.id) ? f.teacherId : '' })}
                 className={cn('inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium', f.subjectId === s.id ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-gray-200 hover:bg-gray-50')}>
                 <SubjectIcon subjectId={s.id} className="h-4 w-4" />{s.name}

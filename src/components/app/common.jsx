@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Video, Plus, Trash2, Calculator, FlaskConical, Languages, Code2, BookOpen, Type, Landmark } from 'lucide-react'
-const Icons = { Calculator, FlaskConical, Languages, Code2, BookOpen, Type, Landmark }
+import { ChevronLeft, ChevronRight, Video, Plus, Trash2, BookOpen, Calculator, FlaskConical, Atom, Languages, Code2, Type, Landmark, ChessKnight, Music, Palette, Globe, PenTool, Brain, Microscope, Sigma, Leaf, History, Lightbulb, Rocket, Trophy, Mic, Camera, GraduationCap } from 'lucide-react'
+export const Icons = { BookOpen, Calculator, FlaskConical, Atom, Languages, Code2, Type, Landmark, ChessKnight, Music, Palette, Globe, PenTool, Brain, Microscope, Sigma, Leaf, History, Lightbulb, Rocket, Trophy, Mic, Camera, GraduationCap }
 import { useStore } from '../../lib/store.js'
-import { subjectById } from '../../lib/data.js'
+import { subjectById, mergeSubjects } from '../../lib/data.js'
 import { weekDays, startOfWeek, addDays, sameDay, isJoinable, ymd } from '../../lib/schedule.js'
 import { Button, Badge, Select } from '../ui/index.jsx'
 import { cn, fmtTime, DAYS, TIME_OPTIONS, timeLabel, cap } from '../../lib/utils.js'
@@ -25,6 +25,11 @@ export function usePeople() {
 export const names = (ids = [], byId) => ids.map((id) => byId[id]?.name || 'Unknown').join(', ')
 
 // ---------- subjects ----------
+// All subjects (built-in + admin-added). Pass { all: true } to include hidden ones.
+export function useSubjects({ all = false } = {}) {
+  const records = useStore((s) => s.subjects)
+  return useMemo(() => mergeSubjects(records).filter((s) => all || !s.hidden), [records, all])
+}
 export function SubjectIcon({ subjectId, className = 'h-5 w-5' }) {
   const I = Icons[subjectById(subjectId).icon] || Icons.BookOpen
   return <I className={className} />

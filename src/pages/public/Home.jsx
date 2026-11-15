@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, ChevronDown, Video, CalendarDays, UserCheck } from 'lucide-react'
-import { SUBJECTS, TEACHERS, FAQS, BRAND } from '../../lib/data.js'
-import { SubjectIcon } from '../../components/app/common.jsx'
+import { TEACHERS, FAQS, BRAND } from '../../lib/data.js'
+import { SubjectIcon, useSubjects } from '../../components/app/common.jsx'
 import { Button, Input, Select, Textarea, asset } from '../../components/ui/index.jsx'
 import { useStore, useMe, toast } from '../../lib/store.js'
 import { homeFor } from '../../components/app/AppShell.jsx'
@@ -27,6 +27,7 @@ function Header() {
 }
 
 function TrialForm() {
+  const subjects = useSubjects()
   const addLead = useStore((s) => s.addLead)
   const [f, setF] = useState({ name: '', email: '', phone: '', studentAge: '', subject: '', times: '', message: '' })
   const [sent, setSent] = useState(false)
@@ -47,7 +48,7 @@ function TrialForm() {
         <Input label="Phone / WhatsApp" type="tel" value={f.phone} onChange={set('phone')} />
         <Input label="Student's age" type="number" min="3" max="99" value={f.studentAge} onChange={set('studentAge')} />
       </div>
-      <Select label="Subject" required value={f.subject} onChange={set('subject')}><option value="">Choose a subject…</option>{SUBJECTS.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
+      <Select label="Subject" required value={f.subject} onChange={set('subject')}><option value="">Choose a subject…</option>{subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</Select>
       <Input label="Preferred days & times" placeholder="e.g. weekdays after 5 PM" value={f.times} onChange={set('times')} />
       <Textarea label="Anything else? (optional)" rows={3} value={f.message} onChange={set('message')} />
       <Button type="submit" size="lg" className="w-full">Request a free trial</Button>
@@ -73,6 +74,7 @@ function Faq() {
 }
 
 export default function Home() {
+  const subjects = useSubjects()
   return (
     <div className="bg-white">
       <Header />
@@ -81,7 +83,7 @@ export default function Home() {
         <div>
           <p className="eyebrow">Live online classes</p>
           <h1 className="mt-3 text-4xl font-bold leading-tight tracking-tight text-ink sm:text-5xl lg:text-6xl">Learn with a real teacher, <span className="text-brand-600">one class at a time.</span></h1>
-          <p className="mt-6 max-w-lg text-lg leading-relaxed text-gray-600">Math, Science, English, Programming, Qur'an, Arabic and Islamic Studies — live, friendly lessons at times that fit your week.</p>
+          <p className="mt-6 max-w-lg text-lg leading-relaxed text-gray-600">Math, Science, English, Programming, Chess, Qur'an, Arabic and more — live, friendly lessons at times that fit your week.</p>
           <div className="mt-8 flex flex-wrap gap-3"><a href="#trial" className="btn btn-lg btn-primary">Book a free trial</a><Link to="/login" className="btn btn-lg btn-outline">Log in</Link></div>
         </div>
         <div className="mx-auto w-full max-w-md">
@@ -107,7 +109,7 @@ export default function Home() {
           <h2 className="section-title text-center">Subjects</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-gray-600">One-on-one or small-group classes for children, teens and adults.</p>
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {SUBJECTS.map((s) => (
+            {subjects.map((s) => (
               <div key={s.id} className="card p-6">
                 <span className={cn('flex h-11 w-11 items-center justify-center rounded-xl border', s.color)}><SubjectIcon subjectId={s.id} /></span>
                 <h3 className="mt-4 font-semibold text-ink">{s.name}</h3>
