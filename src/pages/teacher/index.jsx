@@ -3,7 +3,7 @@ import { CalendarDays, Clock, Save } from 'lucide-react'
 import { useStore, useMe, toast } from '../../lib/store.js'
 import { subjectById } from '../../lib/data.js'
 import { startOfWeek, sameDay, addDays } from '../../lib/schedule.js'
-import { usePeople, SessionRow, WeekCalendar, SubjectChip, JoinButton, AvailabilityEditor, SubjectIcon, names, weeklySummary } from '../../components/app/common.jsx'
+import { usePeople, SessionRow, WeekCalendar, SubjectChip, ClassStartButtons, VideoBadge, AvailabilityEditor, SubjectIcon, names, weeklySummary } from '../../components/app/common.jsx'
 import { PageTitle } from '../../components/app/AppShell.jsx'
 import { Button, Dialog, EmptyState, Input, Textarea } from '../../components/ui/index.jsx'
 import { cn, fmtTime, greeting } from '../../lib/utils.js'
@@ -20,7 +20,8 @@ export function TeacherSessionPanel({ sess, onClose }) {
   return (
     <Dialog open onClose={onClose} size="md" title={subjectById(sess.subjectId).name} desc={`${new Date(sess.start).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} · ${fmtTime(sess.start)}–${fmtTime(sess.end)}`}>
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3"><p className="text-sm text-gray-600"><span className="text-gray-400">Students:</span> {names(sess.studentIds, byId)}</p><JoinButton sess={sess} size="md" label="Start / Join" /></div>
+        <div className="flex items-center justify-between gap-3"><p className="text-sm text-gray-600"><span className="text-gray-400">Students:</span> {names(sess.studentIds, byId)}</p><VideoBadge sess={sess} /></div>
+        <ClassStartButtons sess={sess} teacher />
         {sess.status === 'cancelled' && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">This session was cancelled by the academy.</p>}
         <Input app label="Lesson topic" placeholder="e.g. Fractions — adding with different denominators" value={f.topic} onChange={(e) => setF((x) => ({ ...x, topic: e.target.value }))} />
         <Textarea app label="Homework (students see this)" rows={3} placeholder="What should the student practise before next class?" value={f.homework} onChange={(e) => setF((x) => ({ ...x, homework: e.target.value }))} />
@@ -53,7 +54,7 @@ export function TeacherToday() {
             <p className="mt-0.5 text-xl font-semibold text-ink">{subjectById(next.subjectId).name} · {fmtTime(next.start)}–{fmtTime(next.end)}</p>
             <p className="text-gray-600">{names(next.studentIds, byId)}</p>
           </div>
-          <div className="flex gap-2"><Button app variant="outline" onClick={() => setOpen(next)}>Lesson notes</Button><JoinButton sess={next} size="md" label="Start class" /></div>
+          <div className="flex flex-wrap items-start gap-2"><ClassStartButtons sess={next} teacher /><Button app variant="outline" onClick={() => setOpen(next)}>Lesson notes</Button></div>
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-2">

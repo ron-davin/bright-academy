@@ -1,0 +1,9 @@
+{
+  "name": "bright-academy-manual-tools",
+  "private": true,
+  "type": "module",
+  "description": "Screenshot capture for the PDF manuals and the two-browser classroom test",
+  "devDependencies": {
+    "puppeteer-core": "23.11.1"
+  }
+}

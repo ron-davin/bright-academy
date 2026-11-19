@@ -99,6 +99,9 @@ export const useStore = create((set, get) => ({
   }),
   removeSubject: (id) => set((s) => ({ subjects: s.subjects.filter((x) => x.id !== id) })),
 
+  // ---------- academy settings (admin) ----------
+  setSetting: (key, value) => set((s) => ({ settings: { ...s.settings, [key]: value } })),
+
   // ---------- leads (public trial form) ----------
   addLead: (lead) => set((s) => ({ leads: [{ id: uid('lead'), at: nowISO(), handled: false, ...lead }, ...s.leads] })),
   updateLead: (id, patch) => set((s) => ({ leads: s.leads.map((l) => (l.id === id ? { ...l, ...patch } : l)) })),

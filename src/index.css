@@ -85,3 +85,8 @@
   @keyframes fadeUp { from { opacity: 0; transform: translateY(8px);} to { opacity: 1; transform: none; } }
   .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+/* Zoom Video SDK players (components/app/ZoomStage.jsx) */
+video-player-container:not(.hidden) { display: block; }
+.zoom-tile video-player, .zoom-share video-player { display: block; width: 100%; height: 100%; }
+.zoom-self video-player { transform: scaleX(-1); }

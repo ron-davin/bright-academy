@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Video, Plus, Trash2, BookOpen, Calculator, F
 export const Icons = { BookOpen, Calculator, FlaskConical, Atom, Languages, Code2, Type, Landmark, ChessKnight, Music, Palette, Globe, PenTool, Brain, Microscope, Sigma, Leaf, History, Lightbulb, Rocket, Trophy, Mic, Camera, GraduationCap }
 import { useStore } from '../../lib/store.js'
 import { subjectById, mergeSubjects } from '../../lib/data.js'
+import { useZoomOn, classUrl } from '../../lib/video.js'
 import { weekDays, startOfWeek, addDays, sameDay, isJoinable, ymd } from '../../lib/schedule.js'
 import { Button, Badge, Select } from '../ui/index.jsx'
 import { cn, fmtTime, DAYS, TIME_OPTIONS, timeLabel, cap } from '../../lib/utils.js'
@@ -43,7 +44,35 @@ export function SubjectChip({ subjectId, className }) {
 export function JoinButton({ sess, size = 'sm', label = 'Join' }) {
   const nav = useNavigate()
   if (!isJoinable(sess)) return null
-  return <Button app size={size} onClick={(e) => { e.stopPropagation(); nav(`/class/${sess.id}`) }}><Video className="h-4 w-4" /> {label}</Button>
+  return <Button app size={size} onClick={(e) => { e.stopPropagation(); nav(classUrl(sess.id)) }}><Video className="h-4 w-4" /> {label}</Button>
+}
+
+export function ZoomBadge({ className }) {
+  return <span className={cn('inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-700', className)}><Video className="h-3 w-3" /> Zoom</span>
+}
+export function VideoBadge({ sess }) {
+  const zoom = useZoomOn()
+  return zoom && ['scheduled', 'live'].includes(sess.status) ? <ZoomBadge /> : null
+}
+
+// Start / join buttons: "Start Zoom session" + "Built-in room" when Zoom is on, otherwise one built-in button.
+// Before the class opens the buttons show but stay disabled.
+export function ClassStartButtons({ sess, teacher, size = 'md' }) {
+  const nav = useNavigate()
+  const zoom = useZoomOn()
+  if (sess.status === 'cancelled' || sess.status === 'completed') return null
+  const open = isJoinable(sess)
+  const go = (builtin) => (e) => { e.stopPropagation(); nav(classUrl(sess.id, builtin)) }
+  const main = zoom ? (teacher ? 'Start Zoom session' : 'Join on Zoom') : (teacher ? 'Start class' : 'Join class')
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <div className="flex flex-wrap gap-2">
+        <Button app size={size} disabled={!open} onClick={go(false)}><Video className="h-4 w-4" /> {main}</Button>
+        {zoom && <Button app size={size} variant="outline" disabled={!open} onClick={go(true)} title="Free browser-to-browser video, without Zoom">Built-in room</Button>}
+      </div>
+      {!open && <p className="text-xs text-gray-500">Opens 10 minutes before class.</p>}
+    </div>
+  )
 }
 
 export function StatusBadge({ status }) {
@@ -61,7 +90,7 @@ export function SessionRow({ sess, who, showDate, onClick }) {
       </div>
       <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border', subjectById(sess.subjectId).color)}><SubjectIcon subjectId={sess.subjectId} className="h-4 w-4" /></span>
       <div className="min-w-0 flex-1">
-        <p className={cn('truncate font-medium text-ink', sess.status === 'cancelled' && 'line-through')}>{subjectById(sess.subjectId).name}{sess.oneOff ? ' · extra class' : ''}</p>
+        <p className={cn('flex items-center gap-2 truncate font-medium text-ink', sess.status === 'cancelled' && 'line-through')}>{subjectById(sess.subjectId).name}{sess.oneOff ? ' · extra class' : ''}<VideoBadge sess={sess} /></p>
         <p className="truncate text-sm text-gray-500">{who}</p>
       </div>
       <StatusBadge status={sess.status} />

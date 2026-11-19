@@ -3,7 +3,7 @@ import { CalendarDays, BookMarked, NotebookPen } from 'lucide-react'
 import { useStore, useMe } from '../../lib/store.js'
 import { subjectById } from '../../lib/data.js'
 import { sameDay, isJoinable, addDays, startOfDay } from '../../lib/schedule.js'
-import { usePeople, SessionRow, SubjectIcon, SubjectChip, JoinButton, weeklySummary } from '../../components/app/common.jsx'
+import { usePeople, SessionRow, SubjectIcon, SubjectChip, ClassStartButtons, weeklySummary } from '../../components/app/common.jsx'
 import { PageTitle } from '../../components/app/AppShell.jsx'
 import { EmptyState } from '../../components/ui/index.jsx'
 import { cn, fmtTime, greeting } from '../../lib/utils.js'
@@ -30,7 +30,7 @@ export function StudentToday() {
           <div className="mt-3 flex flex-col gap-5 sm:flex-row sm:items-center">
             <span className={cn('flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border', subjectById(next.subjectId).color)}><SubjectIcon subjectId={next.subjectId} className="h-8 w-8" /></span>
             <div className="flex-1"><p className="text-2xl font-bold text-ink">{subjectById(next.subjectId).name}</p><p className="text-lg text-gray-600">{fmtTime(next.start)} – {fmtTime(next.end)} · with {teacherName(byId, next)}</p></div>
-            {isJoinable(next) ? <JoinButton sess={next} size="md" label="Join class" /> : <p className="text-sm text-gray-500">The Join button appears 10 minutes before class.</p>}
+            <ClassStartButtons sess={next} />
           </div>
         </div>
       ) : <div className="app-card mb-6"><EmptyState icon={CalendarDays} title="No classes scheduled yet" desc="The academy will add your classes soon." /></div>}

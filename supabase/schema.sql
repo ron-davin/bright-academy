@@ -108,17 +108,17 @@ exception when duplicate_object then null; end $$;
 -- Done. Next: disable "Confirm email" (Auth → Sign In / Providers → Email) for a frictionless demo,
 -- then run `node scripts/seed-cloud.mjs` locally to create demo accounts + sample data.
 
--- 7) Subjects: readable by everyone (participants = {'public'}), writable only by admins
+-- 7) Subjects & academy settings: readable by everyone (participants = {'public'}), writable only by admins
 create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
 $$;
 drop policy if exists records_subjects_admin_ins on public.records;
 create policy records_subjects_admin_ins on public.records as restrictive for insert to authenticated
-  with check (collection <> 'subjects' or public.is_admin());
+  with check (collection not in ('subjects', 'settings') or public.is_admin());
 drop policy if exists records_subjects_admin_upd on public.records;
 create policy records_subjects_admin_upd on public.records as restrictive for update to authenticated
-  using (collection <> 'subjects' or public.is_admin()) with check (collection <> 'subjects' or public.is_admin());
+  using (collection not in ('subjects', 'settings') or public.is_admin()) with check (collection not in ('subjects', 'settings') or public.is_admin());
 drop policy if exists records_subjects_admin_del on public.records;
 create policy records_subjects_admin_del on public.records as restrictive for delete to authenticated
-  using (collection <> 'subjects' or public.is_admin());
+  using (collection not in ('subjects', 'settings') or public.is_admin());

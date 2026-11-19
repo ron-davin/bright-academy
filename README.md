@@ -27,6 +27,7 @@ Vite + React 19 + Tailwind v4 + Zustand, Supabase (auth, Postgres with row-level
 - `src/lib/store.js` / `src/lib/cloud.js` — state + Supabase sync
 - `netlify/functions/admin-users.mjs` — admin-only account management (uses `SUPABASE_SERVICE_KEY` env var on Netlify)
 - `netlify/functions/supabase-keepalive.mjs` — daily ping so the free Supabase project never pauses
+- `netlify/functions/zoom.mjs` + `src/components/app/ZoomStage.jsx` — Zoom Video SDK classroom (see below)
 - `scripts/seed-cloud.mjs` — demo data (keeps all leads)
 
 ```bash
@@ -35,5 +36,17 @@ npm run dev
 npm run build && npx netlify-cli deploy --prod --dir dist --functions netlify/functions --site <site-id>
 ```
 
+## Zoom video (optional)
+The classroom can run its video on Zoom's network (Zoom Video SDK) instead of the free built-in WebRTC room.
+Chat, whiteboard, attendance and "End class" stay the same. Nobody needs a Zoom account or app.
+
+1. Create a Video SDK account at developers.zoom.us (pay-as-you-go: 10,000 free minutes/month, then ~$0.0035/min).
+2. In the Zoom developer console open **Video SDK › Build** and copy the **SDK Key** and **SDK Secret**.
+3. Add them as Netlify env vars `ZOOM_SDK_KEY` and `ZOOM_SDK_SECRET`, then redeploy.
+4. Admin › Settings › **Video classroom** → Zoom (default) or Built-in.
+
+Join tokens are signed server-side, only for that class's teacher/students (or the admin), only from 15 minutes
+before the class until 30 minutes after it. Every classroom keeps a "backup room" link to the built-in video.
+
 ## Costs
-Everything runs on free tiers (Netlify, Supabase, public STUN servers). Paid upgrades only if needed: Supabase Pro (~$25/mo), a TURN relay for very strict networks, a custom domain (~$10–15/yr).
+Everything runs on free tiers (Netlify, Supabase, public STUN servers). Paid upgrades only if needed: Zoom Video SDK beyond 10,000 free minutes/month (~$0.0035/min), Supabase Pro (~$25/mo), a TURN relay for very strict networks, a custom domain (~$10–15/yr).

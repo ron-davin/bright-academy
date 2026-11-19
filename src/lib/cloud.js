@@ -8,14 +8,14 @@ export const supabase = CLOUD_CONFIGURED ? createClient(SUPABASE_URL, SUPABASE_A
 export const cloudActive = () => CLOUD_CONFIGURED
 
 export const ARRAY_COLLECTIONS = ['classes', 'sessions', 'leads', 'subjects']
-export const MAP_COLLECTIONS = ['availability']
+export const MAP_COLLECTIONS = ['availability', 'settings']
 
 // Who may read/write each record. Admins see everything via the RLS admin clause.
 export function participantsFor(collection, item) {
   switch (collection) {
     case 'classes': case 'sessions': return [item.teacherId, ...(item.studentIds || [])].filter(Boolean)
     case 'availability': return [item.id]
-    case 'subjects': return ['public'] // everyone (incl. the homepage) reads; only admins write (RLS)
+    case 'subjects': case 'settings': return ['public'] // everyone (incl. the homepage) reads; only admins write (RLS)
     default: return [] // leads: admin-only
   }
 }

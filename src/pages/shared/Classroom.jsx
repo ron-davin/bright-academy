@@ -7,6 +7,8 @@ import { homeFor } from '../../components/app/AppShell.jsx'
 import { supabase, cloudActive } from '../../lib/cloud.js'
 import { Avatar, Badge, Button, Dialog, Input, asset } from '../../components/ui/index.jsx'
 import { cn, fmtTime, initials, uid } from '../../lib/utils.js'
+import ZoomStage from '../../components/app/ZoomStage.jsx'
+import { zoomConfigured } from '../../lib/video.js'
 
 const roomName = (sessionId) => `room-${String(sessionId).replace(/[^a-zA-Z0-9-]/g, '')}`
 // Free connectivity: three independent public STUN providers (probed live 2026-08).
@@ -103,6 +105,12 @@ export default function Classroom() {
   const markAttendance = (id, studentId, present) => updateSession(id, { attendance: { ...(sess?.attendance || {}), [studentId]: present } })
   const isTeacher = !!user && user.id === sess?.teacherId
   const cloud = cloudActive() && !!supabase
+  // Video engine: Zoom when it's set up on the server and the admin hasn't chosen the built-in room
+  const videoSetting = useStore((s) => s.settings?.video)
+  const [zoomOk, setZoomOk] = useState(null)
+  useEffect(() => { zoomConfigured().then(setZoomOk) }, [])
+  const useZoom = !!zoomOk && videoSetting !== 'builtin' && params.get('room') !== 'builtin'
+  const zoomRef = useRef(false); zoomRef.current = useZoom
 
   const [joined, setJoined] = useState(false)
   const [localStream, setLocalStream] = useState(null)
@@ -201,16 +209,10 @@ export default function Classroom() {
       return next
     })
     for (const id of Object.keys(pcsRef.current)) if (!roster[id]) { try { pcsRef.current[id].close() } catch { /* noop */ } delete pcsRef.current[id] }
-    for (const id of Object.keys(roster)) if (!pcsRef.current[id] && myIdRef.current < id) initiateTo(id)
+    if (!zoomRef.current) for (const id of Object.keys(roster)) if (!pcsRef.current[id] && myIdRef.current < id) initiateTo(id)
   }, [initiateTo])
 
-  const join = useCallback(async () => {
-    setConnState('connecting')
-    let stream = null
-    const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
-    try { stream = await withTimeout(navigator.mediaDevices.getUserMedia({ video: true, audio: true }), 6000) } catch { try { stream = await withTimeout(navigator.mediaDevices.getUserMedia({ audio: true }), 3000) } catch { setMediaError('Camera/mic unavailable — joining without media. Check browser permissions, then rejoin.') } }
-    streamRef.current = stream; setLocalStream(stream)
-    if (!cloud) { setJoined(true); setConnState('local'); if (isTeacher) startSession(sessionId); return }
+  const joinChannel = useCallback(() => {
     const ch = supabase.channel(roomName(sessionId), { config: { presence: { key: myIdRef.current }, broadcast: { self: false } } })
     channelRef.current = ch
     ch.on('presence', { event: 'sync' }, onPresence)
@@ -221,7 +223,19 @@ export default function Classroom() {
       if (status === 'SUBSCRIBED') { await ch.track({ name: myName, role: user.role }); setJoined(true); setConnState('connected'); if (isTeacher) { startSession(sessionId); toast({ title: 'Classroom is live', desc: 'Students can join now.', type: 'success' }) } }
       else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') { setConnState('error'); setMediaError('Could not reach the realtime service. Check your connection, or use "Open in Jitsi" below.') }
     })
-  }, [cloud, isTeacher, myName, onPresence, onSignal, sessionId, startSession, user, wbBus])
+  }, [isTeacher, myName, onPresence, onSignal, sessionId, startSession, user, wbBus])
+
+
+  const join = useCallback(async () => {
+    setConnState('connecting')
+    let stream = null
+    if (zoomRef.current) return joinChannel() // Zoom handles camera/mic itself; our channel carries chat, board and roster
+    const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
+    try { stream = await withTimeout(navigator.mediaDevices.getUserMedia({ video: true, audio: true }), 6000) } catch { try { stream = await withTimeout(navigator.mediaDevices.getUserMedia({ audio: true }), 3000) } catch { setMediaError('Camera/mic unavailable — joining without media. Check browser permissions, then rejoin.') } }
+    streamRef.current = stream; setLocalStream(stream)
+    if (!cloud) { setJoined(true); setConnState('local'); if (isTeacher) startSession(sessionId); return }
+    joinChannel()
+  }, [cloud, isTeacher, joinChannel, sessionId, startSession])
 
   useEffect(() => () => {
     Object.values(pcsRef.current).forEach((pc) => { try { pc.close() } catch { /* noop */ } })
@@ -283,11 +297,12 @@ export default function Classroom() {
       <div className="text-center"><h1 className="font-display text-3xl font-black">{course?.title}</h1>
         <p className="mt-1 text-white/70">{students.map((s) => s.name).join(', ')} · {fmtTime(sess.start)}–{fmtTime(sess.end)}</p></div>
       <div className="w-full max-w-md rounded-2xl bg-white/8 p-6">
-        <p className="text-sm text-white/80">Check camera/mic before joining. Your browser will ask for permission.</p>
+        <p className="text-sm text-white/80">Check camera/mic before joining. Your browser will ask for permission.{useZoom ? ' Video is powered by Zoom — no app or Zoom account needed.' : ''}</p>
         {mediaError && <p className="mt-3 rounded-lg bg-coral-500/20 p-2.5 text-xs text-coral-200">{mediaError}</p>}
-        <Button variant="sun" className="mt-4 w-full" onClick={join} loading={connState === 'connecting'}>{isTeacher ? 'Start class & join' : 'Join the session'}</Button>
+        <Button variant="sun" className="mt-4 w-full" onClick={join} loading={connState === 'connecting' || zoomOk === null}>{isTeacher ? 'Start class & join' : 'Join the session'}</Button>
+        {useZoom ? <a href={`?room=builtin`} className="mt-3 flex items-center justify-center gap-2 rounded-full border border-white/20 px-4 py-2.5 text-sm text-white/80 hover:bg-white/10">Having trouble? Use the backup room</a> : <>
         <a href={jitsiUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center justify-center gap-2 rounded-full border border-white/20 px-4 py-2.5 text-sm text-white/80 hover:bg-white/10"><ExternalLink className="h-4 w-4" /> Open in Jitsi Meet instead (free fallback)</a>
-        <p className="mt-4 text-[11px] leading-relaxed text-white/50">Built-in room: direct WebRTC video over free public STUN, signalled through the academy cloud — no cost. If video can’t connect on a strict school/office network, use the Jitsi button above.</p>
+        <p className="mt-4 text-[11px] leading-relaxed text-white/50">Built-in room: direct WebRTC video over free public STUN, signalled through the academy cloud — no cost. If video can’t connect on a strict school/office network, use the Jitsi button above.</p></>}
       </div>
       <button type="button" onClick={back} className="text-sm text-white/60 hover:text-white">← Back</button>
     </div>
@@ -306,12 +321,12 @@ export default function Classroom() {
         </div>
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1 text-xs font-medium"><Clock className="h-3.5 w-3.5" /> {timer}</span>
-          <a href={jitsiUrl} target="_blank" rel="noreferrer" className="hidden rounded-lg bg-white/10 p-2 hover:bg-white/20 sm:block" aria-label="Open in Jitsi" title="Open in Jitsi (fallback)"><ExternalLink className="h-4 w-4" /></a>
+          {!useZoom && <a href={jitsiUrl} target="_blank" rel="noreferrer" className="hidden rounded-lg bg-white/10 p-2 hover:bg-white/20 sm:block" aria-label="Open in Jitsi" title="Open in Jitsi (fallback)"><ExternalLink className="h-4 w-4" /></a>}
           <button type="button" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast({ title: 'Class link copied', type: 'success' }) }} className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Copy link"><Copy className="h-4 w-4" /></button>
         </div>
       </header>
       <div className="flex flex-1 flex-col lg:flex-row">
-        <div className="flex flex-1 flex-col p-3">
+        {useZoom ? <ZoomStage sessionId={sessionId} onLeave={leave} onFallback={() => { window.location.href = `${window.location.pathname}?room=builtin` }} /> : <div className="flex flex-1 flex-col p-3">
           <div className={cn('grid flex-1 content-start gap-3', peerList.length === 0 ? 'mx-auto w-full max-w-2xl grid-cols-1' : peerList.length <= 1 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3')}>
             <VideoTile stream={localStream} name={myName} muted self off={!cam} />
             {peerList.map(([pid, p]) => <VideoTile key={pid} stream={p.stream} name={p.name || 'Participant'} link={p.link} />)}
@@ -324,7 +339,7 @@ export default function Classroom() {
             <button type="button" onClick={record} className={cn('rounded-full p-3.5', recording ? 'bg-coral-500' : 'bg-white/10 hover:bg-white/20')} aria-label="Record">{recording ? <Square className="h-5 w-5" /> : <Circle className="h-5 w-5" />}</button>
             <button type="button" onClick={leave} className="rounded-full bg-coral-500 px-6 py-3.5 hover:bg-coral-600" aria-label="Leave"><PhoneOff className="h-5 w-5" /></button>
           </div>
-        </div>
+        </div>}
         <aside className="flex h-[46vh] flex-col border-t border-white/10 bg-white text-ink lg:h-auto lg:w-[360px] lg:border-l lg:border-t-0">
           <div className="flex border-b border-ink/8">
             {[['chat', MessageSquare, 'Chat'], ['whiteboard', PenTool, 'Board'], ['people', Users, 'People'], ['notes', NotebookPen, 'Topic']].map(([v, I, l]) => (
